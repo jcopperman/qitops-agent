@@ -100,4 +100,4 @@ MIT — Because quality should be open.
 - The need for tools that *amplify* testers, not replace them
 - A vision of QA as an operational, embedded force for good
 
-Built with care, by [Jonathan](https://jcopperman.dev) — founder of QitOps, neurodivergent maker, and lifelong
+Built with care, by [Jonathan](https://jcopperman.dev) — founder of QitOps, neurodivergent maker, and lifelong QA thinker.
