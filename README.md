@@ -1,102 +1,103 @@
 # qitops-agent
 
-> This is the beginning of an open-source QA Agent powered by the QitOps philosophy.
+**The QitOps Agent** is an open-source AI-powered QA Assistant — built as the capstone project of [QitOps Learn](https://qitops.dev), and a flagship initiative of the QitOps testing philosophy.
 
-## 🌟 What is qitops-agent?
+It represents the culmination of a vision: to reimagine Quality Assurance not as an afterthought or gatekeeper, but as an **embedded, intelligent, human-centered force for stability, trust, and creativity in software development**.
 
-`qitops-agent` is an intelligent assistant for modern QA professionals. It's designed to augment, not replace, the judgment, creativity, and strategy of human testers.
+---
 
-Born from the QitOps vision — where QA is continuous, embedded, intelligent, and human-first — this agent is part tooling, part philosophy, and part community-powered evolution.
+## 🧠 What is the QitOps Agent?
 
-The agent will help testers:
-- Plan smarter tests
-- Understand what to test and why
-- Automate test design without losing intentionality
-- Catch risk early in the development cycle
-- Learn through doing and reflecting
+The QitOps Agent is a modular, evolving AI assistant that helps testers, SDETs, and QA engineers:
 
-## 🎓 Why is this also a Capstone Project?
+- Plan smarter test strategies
+- Generate meaningful test cases
+- Analyze pull requests and surface risks
+- Assist with exploratory and session-based testing
+- Review flaky test histories and offer insights
+- Support test data creation and edge-case scenarios
+- Operate transparently, with explainability and human-in-the-loop confidence scores
 
-This project is also a capstone for learners of QitOps Learn, our QA career development platform. Contributors will:
-- Apply AI + QA skills in a real-world codebase
-- Collaborate on scoped, meaningful tasks
-- Build a public portfolio of impactful, next-gen QA work
+This is more than just a tool — it’s a living expression of the QitOps methodology.
 
-## ✨ Key Features (MVP Scope)
+---
 
-- **🧠 Test Case Generation**
-  - From user stories, feature specs, or code diffs
-  - Output: YAML, Gherkin, Robot Framework
+## 🌱 Project Goals
 
-- **🔍 Risk Detection**
-  - Analyzes PRs and diffs for high-risk changes
-  - Suggests where QA should focus
+- 🎓 Serve as the **capstone project** of the QitOps Learn AI-Augmented QA track
+- 🚀 Evolve as a **community-led open source tool** for AI-augmented software testing
+- 📖 Demonstrate the **QitOps testing philosophy** in action: intelligent, adaptable, ethical QA by design
+- 🛠 Build integrations with GitHub, Jira, Linear, and local dev/test environments
+- 📦 Offer a **plugin-based architecture** to allow new agents, models, or extensions to be added modularly
 
-- **🛠️ Test Strategy Assistant**
-  - Suggests test types, techniques, and heuristics
-  - Based on system type, domain, or context
+---
 
-- **🗣️ Exploratory Testing Aid**
-  - Recommends next test ideas based on notes and findings
+## 🧩 Initial Feature Roadmap
 
-- **📊 Test Data Generator**
-  - Structured, edge-case rich data generation (JSON, forms, inputs)
+### ✅ Phase 1: Foundational Agents
+- [ ] Test Case Generator (Markdown / YAML / Robot Framework)
+- [ ] Risk Estimator (PR / diff analysis)
+- [ ] Bug Repro / Severity Analyzer
+- [ ] Test Plan Suggestion Agent
+- [ ] Test Data Generator
 
-- **💬 Explainable Output**
-  - Shows reasoning, confidence scores, and flags hallucinations
+### 🔌 Phase 2: Integrations & Plugins
+- [ ] GitHub PR integration
+- [ ] CLI utility
+- [ ] Local Ollama / OpenRouter LLM support
+- [ ] p5.js-based session UI for exploratory feedback
 
-## 🤝 Philosophy & Principles
+### 🧪 Phase 3: Advanced Use Cases
+- [ ] Historical flakiness detection
+- [ ] QA knowledge synthesis from docs/repos
+- [ ] Auto-generated QA dashboards
+- [ ] Voice or chat-based QA coaching mode
 
-- **Augment, not replace** testers
-- **Explain over guess** — show your work, model
-- **Respect the spectrum** of QA disciplines
-- **Pluggable + composable** architecture
-- **Local-first friendly** — Ollama and open-source LLMs supported
-- **Feedback loops > automation loops**
+---
 
-## 🛤️ Roadmap (High-Level)
+## 🧠 Philosophy
 
-- [ ] Initial CLI with local LLM + YAML generator
-- [ ] GitHub PR context + risk analysis prototype
-- [ ] Plugin architecture design
-- [ ] Web UI (optional) / VS Code extension
-- [ ] Contrib-friendly starter templates (prompt chains, plugins)
+This project is aligned with the values of QitOps:
 
-## 🧑‍🎓 Who Should Contribute?
+- **Human-centered**: The agent supports testers, not replaces them
+- **Intelligent**: Powered by LLMs, contextual memory, and explainability
+- **Composable**: Works across disciplines, from manual to automation to exploratory
+- **Transparent**: Outputs confidence scores, source insights, and prompts
+- **Modular**: Built as a plugin system for rapid community experimentation
 
-- Testers (manual, automation, exploratory)
-- AI tinkerers and prompt engineers
-- LLM devs and ML hobbyists
-- DevTools & CLI lovers
-- Learners from QitOps Learn
+---
 
-If you're curious, thoughtful, and want to shape the future of QA — you're welcome here.
+## 💡 Who Is This For?
 
-## 📚 Inspiration
+- QA professionals curious about AI
+- Developers who care about test quality
+- Learners in the QitOps Learn program
+- Open source contributors who want to shape the future of quality engineering
 
-- The QitOps philosophy
-- Testing heuristics, risk-based testing
-- The strengths (and limitations) of AI tooling
-- Dev-first and human-centric workflows
+---
 
-## 🗺️ Project Structure (To Come)
+## 🤝 Get Involved
 
-```
-qitops-agent/
-├── agent/            # Core logic and AI chains
-├── prompts/          # Modular prompt templates
-├── plugins/          # External tooling or format handlers
-├── cli/              # Command line interface
-├── examples/         # Showcase flows and demos
-└── docs/             # Philosophy, design decisions, guides
-```
+Whether you're a prompt engineer, test automation expert, junior QA analyst, or just curious, you're welcome here.
 
-## 🙌 Let’s Build the Future of QA — Together
+- Browse the [good first issues](https://github.com/jcopperman/qitops-agent/issues)
+- Share ideas in [QitOps Discord](#) *(coming soon)*
+- Follow [@jcopperman](https://github.com/jcopperman) for updates
 
-This is a dream in motion. A capstone for learners. A signal to the world that QA is evolving — and we’re leading the way.
+This project thrives on contribution, curiosity, and experimentation.
 
-Join us. Fork us. Teach us. Break stuff and file issues.
+---
 
-This is QitOps.
+## 📜 License
 
-And it’s just getting started.
+MIT — Because quality should be open.
+
+---
+
+## 🧭 Inspired By
+
+- The struggles and aspirations of testers everywhere
+- The need for tools that *amplify* testers, not replace them
+- A vision of QA as an operational, embedded force for good
+
+Built with care, by [Jonathan](https://jcopperman.dev) — founder of QitOps, neurodivergent maker, and lifelong
