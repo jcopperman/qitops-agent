@@ -76,6 +76,62 @@ This project is aligned with the values of QitOps:
 
 ---
 
+## 🚀 Installation & Usage
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/jcopperman/qitops-agent.git
+cd qitops-agent
+
+# Build the project
+cargo build --release
+
+# Run the binary
+./target/release/qitops-agent --help
+```
+
+### Basic Commands
+
+```bash
+# Get help
+qitops-agent --help
+
+# Generate test cases
+qitops-agent test-gen --path src/user/auth.rs --format markdown
+
+# Analyze a pull request
+qitops-agent pr-analyze --pr 123
+
+# Estimate risk of changes
+qitops-agent risk --diff changes.diff
+
+# Generate test data
+qitops-agent test-data --schema user-profile --count 100
+
+# Start an interactive testing session
+qitops-agent session --name "Login Flow Test"
+```
+
+### LLM Management
+
+QitOps Agent supports multiple LLM providers:
+
+```bash
+# List available providers
+qitops-agent llm list
+
+# Add a new provider
+qitops-agent llm add --provider openai --api-key YOUR_API_KEY --model gpt-4
+
+# Set default provider
+qitops-agent llm default --provider ollama
+
+# Test a provider
+qitops-agent llm test --provider anthropic --prompt "Generate a test case for user authentication"
+```
+
 ## 🤝 Get Involved
 
 Whether you're a prompt engineer, test automation expert, junior QA analyst, or just curious, you're welcome here.

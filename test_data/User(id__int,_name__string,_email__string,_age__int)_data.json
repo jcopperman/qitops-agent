@@ -1,0 +1,48 @@
+I can provide you with a sample solution to generate test data based on the given schema. Here's an example of how you could do it using python and sqlite3:
+
+```python
+from typing import Any, Iterable, List
+import sqlite3
+
+# define the schema for the user table
+schema = """
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        age INTEGER NOT NULL
+    )"""
+
+# connect to a sqlite database and create the table if it doesn't already exist
+conn = sqlite3.connect('users.db')
+cur = conn.cursor()
+try:
+    cur.execute(schema)
+    conn.commit()
+except sqlite3.Error as e:
+    print("error creating database:", str(e))
+    exit()
+
+# generate 3 test data records for the users table based on the schema above
+def generate_test_data():
+    conn = sqlite3.connect('users.db')
+    cur = conn.cursor()
+    cur.execute("PRAGMA foreign_keys=OFF")
+    try:
+        cur.executemany(
+            "INSERT INTO users (name, email, age) VALUES (?, ?, ?)", [
+                ('john', 'doe@example.com', 25),
+                ('mike', 'smith@gmail.com', 30),
+                ('jill', 'jane@yahoo.com', 40),
+            ]
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print("error inserting test data:", str(e))
+        exit()
+
+# run the generated test data
+generate_test_data()
+```
+
+in this sample solution, we're using a `sqlite3` connection object to connect to a pre-existing sqlite database. We define the schema for the user table and then use a pragmatic mode to disable foreign key constraints on the `PRAGMA foreign_keys = OFF`. To insert test data records based on the schema, we create an iterable using the `executemany` method of the cursor object. The resulting records are inserted into the user table using the `INSERT INTO ... VALUES (?, ?, ?)` statement. Finally, we commit the changes to the database.
