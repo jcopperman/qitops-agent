@@ -1,0 +1,57 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/rust:1.77
+    steps:
+      - checkout
+      - run:
+          name: Run tests
+          command: cargo test
+          
+  analyze_pr:
+    docker:
+      - image: cimg/rust:1.77
+    steps:
+      - checkout
+      - run:
+          name: Install QitOps Agent
+          command: |
+            git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent
+            cd /tmp/qitops-agent
+            chmod +x install.sh
+            ./install.sh
+            echo 'export PATH="$HOME/.qitops/bin:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Configure QitOps
+          command: |
+            qitops github config --token $GITHUB_TOKEN --owner $CIRCLE_PROJECT_USERNAME --repo $CIRCLE_PROJECT_REPONAME
+            qitops llm add --provider openai --api-key $OPENAI_API_KEY --model gpt-4
+            qitops llm default --provider openai
+      - run:
+          name: Analyze PR
+          command: |
+            # Extract PR number from branch name (if using CircleCI's GitHub integration)
+            PR_NUMBER=$(echo $CIRCLE_PULL_REQUEST | grep -o '[0-9]*$')
+            if [ -n "$PR_NUMBER" ]; then
+              qitops run pr-analyze --pr $PR_NUMBER
+              qitops run risk --diff $PR_NUMBER --focus security,performance
+            else
+              echo "Not a PR, skipping analysis"
+            fi
+      - store_artifacts:
+          path: qitops-*.md
+          
+workflows:
+  version: 2
+  test_and_analyze:
+    jobs:
+      - test
+      - analyze_pr:
+          requires:
+            - test
+          filters:
+            branches:
+              ignore: main

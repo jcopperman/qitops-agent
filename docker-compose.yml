@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  qitops:
+    build: .
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./config:/root/.config/qitops
+      - ./output:/app/output
+    command: ["run", "pr-analyze", "--pr", "${PR_NUMBER}"]

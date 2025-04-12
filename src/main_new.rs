@@ -6,7 +6,7 @@ mod ci;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::commands::{Cli, Command, RunCommand};
+use cli::commands_new::{Cli, Command, RunCommand};
 use cli::llm::handle_llm_command;
 use cli::github::handle_github_command;
 use cli::branding;
@@ -72,7 +72,7 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
 
             // Create and execute the test generation agent
             let progress = ProgressIndicator::new("Generating test cases...");
-            let agent = TestGenAgent::new(path, &format, router).await?;
+            let agent = TestGenAgent::new(path, format, router).await?;
             let result = agent.execute().await?;
             progress.finish();
 
@@ -95,7 +95,7 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
 
             // Get GitHub configuration
             let github_config_manager = ci::GitHubConfigManager::new()?;
-
+            
             // Try to extract repository information from PR URL
             let (owner, repo, pr_number) = match ci::GitHubClient::extract_repo_info(&pr) {
                 Ok((owner, repo)) => {
@@ -117,18 +117,18 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
                             branding::print_info("Configure with: qitops github config --owner <owner>");
                             anyhow::anyhow!("Default repository owner not configured")
                         })?;
-
+                        
                     let repo = github_config_manager.get_default_repo()
                         .ok_or_else(|| {
                             branding::print_error("Default repository name not configured");
                             branding::print_info("Configure with: qitops github config --repo <repo>");
                             anyhow::anyhow!("Default repository name not configured")
                         })?;
-
+                        
                     (owner, repo, pr.clone())
                 }
             };
-
+            
             // Create GitHub client
             let github_client = match ci::GitHubClient::from_config(github_config_manager.get_config()) {
                 Ok(client) => client,
@@ -167,20 +167,20 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
         RunCommand::Risk { diff, components, focus } => {
             branding::print_command_header("Estimating Risk");
             info!("Estimating risk for diff: {}", diff);
-
+            
             // Parse components and focus areas
             let components = components
                 .map(|c| c.split(',').map(|s| s.trim().to_string()).collect())
                 .unwrap_or_else(Vec::new);
-
+                
             let focus_areas = focus
                 .map(|f| f.split(',').map(|s| s.trim().to_string()).collect())
                 .unwrap_or_else(Vec::new);
-
+                
             if !components.is_empty() {
                 info!("Components: {}", components.join(", "));
             }
-
+            
             if !focus_areas.is_empty() {
                 info!("Focus areas: {}", focus_areas.join(", "));
             }
@@ -190,12 +190,12 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
             let config_manager = ConfigManager::new()?;
             let router = LlmRouter::new(config_manager.get_config().clone()).await?;
             progress.finish();
-
+            
             // Check if diff is a file or a PR URL/number
             let agent = if diff.contains("github.com") || diff.contains("/") {
                 // Try to extract repository information from PR URL
                 let github_config_manager = ci::GitHubConfigManager::new()?;
-
+                
                 match ci::GitHubClient::extract_repo_info(&diff) {
                     Ok((owner, repo)) => {
                         // Try to extract PR number
@@ -237,7 +237,7 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
             } else {
                 // Try to parse as a PR number with default repository
                 let github_config_manager = ci::GitHubConfigManager::new()?;
-
+                
                 if let (Some(owner), Some(repo)) = (github_config_manager.get_default_owner(), github_config_manager.get_default_repo()) {
                     if let Ok(pr_number) = diff.parse::<u64>() {
                         // Create GitHub client
@@ -268,7 +268,7 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
                     RiskAgent::new_from_diff(diff, components, focus_areas, router).await?
                 }
             };
-
+            
             // Execute the risk assessment agent
             let progress = ProgressIndicator::new("Estimating risk...");
             let result = agent.execute().await?;
@@ -299,7 +299,7 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
 
             // Create and execute the test data generation agent
             let progress = ProgressIndicator::new("Generating test data...");
-            let agent = TestDataAgent::new(schema, count, Vec::new(), "json".to_string(), router).await?;
+            let agent = TestDataAgent::new(schema, count, router).await?;
             let result = agent.execute().await?;
             progress.finish();
 

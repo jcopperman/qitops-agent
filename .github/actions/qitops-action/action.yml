@@ -1,0 +1,68 @@
+name: 'QitOps Agent Action'
+description: 'Run QitOps Agent commands in GitHub Actions'
+inputs:
+  command:
+    description: 'QitOps command to run (e.g., run pr-analyze)'
+    required: true
+  args:
+    description: 'Command arguments'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+  openai-api-key:
+    description: 'OpenAI API key for LLM access'
+    required: false
+  ollama-url:
+    description: 'Ollama URL for local LLM access'
+    required: false
+    default: 'http://localhost:11434'
+  llm-provider:
+    description: 'LLM provider to use (openai, ollama, anthropic)'
+    required: false
+    default: 'ollama'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        
+    - name: Install QitOps Agent
+      shell: bash
+      run: |
+        git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent
+        cd /tmp/qitops-agent
+        chmod +x install.sh
+        ./install.sh
+        echo "$HOME/.qitops/bin" >> $GITHUB_PATH
+        
+    - name: Configure QitOps GitHub Integration
+      shell: bash
+      run: |
+        qitops github config --token ${{ inputs.github-token }} --owner ${{ github.repository_owner }} --repo ${{ github.repository.name }}
+        
+    - name: Configure LLM Provider
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.openai-api-key }}" ]; then
+          qitops llm add --provider openai --api-key ${{ inputs.openai-api-key }} --model gpt-4
+        fi
+        
+        if [ -n "${{ inputs.ollama-url }}" ]; then
+          qitops llm add --provider ollama --api-base ${{ inputs.ollama-url }} --model mistral
+        fi
+        
+        qitops llm default --provider ${{ inputs.llm-provider }}
+        
+    - name: Run QitOps Command
+      shell: bash
+      run: |
+        qitops ${{ inputs.command }} ${{ inputs.args }}

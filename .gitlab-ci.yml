@@ -1,0 +1,39 @@
+stages:
+  - test
+  - analyze
+
+variables:
+  RUST_VERSION: "1.77"
+
+.qitops_setup: &qitops_setup
+  - apt-get update && apt-get install -y git curl
+  - git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent
+  - cd /tmp/qitops-agent
+  - chmod +x install.sh
+  - ./install.sh
+  - export PATH="$HOME/.qitops/bin:$PATH"
+  - qitops github config --token $GITHUB_TOKEN --owner $CI_PROJECT_NAMESPACE --repo $CI_PROJECT_NAME
+
+test:
+  stage: test
+  image: rust:$RUST_VERSION
+  script:
+    - cargo test
+
+pr_analysis:
+  stage: analyze
+  image: rust:$RUST_VERSION
+  script:
+    - *qitops_setup
+    - qitops run pr-analyze --pr $CI_MERGE_REQUEST_IID
+  only:
+    - merge_requests
+
+risk_assessment:
+  stage: analyze
+  image: rust:$RUST_VERSION
+  script:
+    - *qitops_setup
+    - qitops run risk --diff $CI_MERGE_REQUEST_IID --focus security,performance
+  only:
+    - merge_requests

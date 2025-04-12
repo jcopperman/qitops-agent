@@ -21,16 +21,27 @@ QitOps Agent is a powerful CLI tool that leverages AI to enhance your QA and tes
 
 ### From Source
 
+#### Windows
+
+```powershell
+# Clone the repository
+git clone https://github.com/jcopperman/qitops-agent.git
+cd qitops-agent
+
+# Run the installation script
+.\install.ps1
+```
+
+#### Linux/macOS
+
 ```bash
 # Clone the repository
 git clone https://github.com/jcopperman/qitops-agent.git
 cd qitops-agent
 
-# Build the project
-cargo build --release
-
-# Run the binary
-./target/release/qitops-agent --help
+# Run the installation script
+chmod +x install.sh
+./install.sh
 ```
 
 ### Using Cargo
@@ -45,22 +56,22 @@ cargo install qitops-agent
 
 ```bash
 # Get help
-qitops-agent --help
+qitops --help
 
 # Generate test cases
-qitops-agent test-gen --path src/user/auth.rs --format markdown
+qitops run test-gen --path src/user/auth.rs --format markdown
 
 # Analyze a pull request
-qitops-agent pr-analyze --pr 123
+qitops run pr-analyze --pr 123
 
 # Estimate risk of changes
-qitops-agent risk --diff changes.diff
+qitops run risk --diff changes.diff
 
 # Generate test data
-qitops-agent test-data --schema user-profile --count 100
+qitops run test-data --schema user-profile --count 100
 
 # Start an interactive testing session
-qitops-agent session --name "Login Flow Test"
+qitops run session --name "Login Flow Test"
 ```
 
 ### LLM Management
@@ -69,16 +80,16 @@ QitOps Agent supports multiple LLM providers:
 
 ```bash
 # List available providers
-qitops-agent llm list
+qitops llm list
 
 # Add a new provider
-qitops-agent llm add --provider openai --api-key YOUR_API_KEY --model gpt-4
+qitops llm add --provider openai --api-key YOUR_API_KEY --model gpt-4
 
 # Set default provider
-qitops-agent llm default --provider ollama
+qitops llm default --provider ollama
 
 # Test a provider
-qitops-agent llm test --provider anthropic --prompt "Generate a test case for user authentication"
+qitops llm test --provider anthropic --prompt "Generate a test case for user authentication"
 ```
 
 ## Configuration
@@ -117,6 +128,26 @@ Example configuration:
 }
 ```
 
+### GitHub Configuration
+
+QitOps Agent can integrate with GitHub for PR analysis and risk assessment. You can configure GitHub integration using the CLI:
+
+```bash
+# Configure GitHub token
+qitops github config --token YOUR_GITHUB_TOKEN
+
+# Configure default repository
+qitops github config --owner username --repo repository
+
+# Check GitHub configuration status
+qitops github status
+
+# Test GitHub connection
+qitops github test
+```
+
+This configuration allows you to analyze PRs and assess risks directly from GitHub URLs or PR numbers.
+
 ## Real-World Testing Scenarios
 
 QitOps Agent can be used in various real-world testing scenarios:
@@ -127,10 +158,10 @@ Generate comprehensive test cases for your applications:
 
 ```bash
 # Generate test cases for a specific feature or component
-qitops-agent test-gen --component user-authentication --coverage high
+qitops run test-gen --component user-authentication --coverage high
 
 # Generate test cases with specific focus areas
-qitops-agent test-gen --focus edge-cases --component payment-processing
+qitops run test-gen --focus edge-cases --component payment-processing
 ```
 
 ### 2. Pull Request Analysis
@@ -139,10 +170,10 @@ Integrate into your CI/CD pipeline:
 
 ```bash
 # Analyze a pull request for potential issues
-qitops-agent pr-analyze --repo your-repo --pr 123
+qitops run pr-analyze --pr https://github.com/username/repo/pull/123
 
 # Analyze with specific focus on security concerns
-qitops-agent pr-analyze --repo your-repo --pr 123 --focus security
+qitops run pr-analyze --pr 123 --focus security
 ```
 
 ### 3. Risk Assessment
@@ -151,10 +182,10 @@ For critical changes, use the risk estimation feature:
 
 ```bash
 # Estimate the risk of changes in a specific PR
-qitops-agent risk --pr 123 --components "payment,user-data"
+qitops run risk --diff https://github.com/username/repo/pull/123 --components "payment,user-data"
 
 # Estimate risk with specific focus
-qitops-agent risk --pr 123 --focus "data-integrity,security"
+qitops run risk --diff 123 --focus "data-integrity,security"
 ```
 
 ### 4. Test Data Generation
@@ -163,10 +194,10 @@ Generate realistic test data for your applications:
 
 ```bash
 # Generate test data for a specific schema
-qitops-agent test-data --schema user-profile --count 100
+qitops run test-data --schema user-profile --count 100
 
 # Generate test data with specific constraints
-qitops-agent test-data --schema financial-transaction --constraints "amount<1000,currency=USD" --count 50
+qitops run test-data --schema financial-transaction --constraints "amount<1000,currency=USD" --count 50
 ```
 
 ### 5. Interactive Testing Sessions
@@ -175,10 +206,10 @@ For exploratory testing:
 
 ```bash
 # Start an interactive testing session
-qitops-agent session --application web-app --focus "user-journey"
+qitops run session --application web-app --focus "user-journey"
 
 # Start a session with specific test objectives
-qitops-agent session --application mobile-app --objectives "verify-payment-flow,test-error-handling"
+qitops run session --application mobile-app --objectives "verify-payment-flow,test-error-handling"
 ```
 
 ## Development
@@ -208,6 +239,9 @@ cargo test
 
 # Run with verbose logging
 cargo run -- --verbose llm list
+
+# Or if installed
+qitops --verbose llm list
 ```
 
 ## Contributing

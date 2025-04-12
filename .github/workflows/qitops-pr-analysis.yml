@@ -1,0 +1,53 @@
+name: QitOps PR Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  analyze-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          
+      - name: Install QitOps Agent
+        run: |
+          git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent
+          cd /tmp/qitops-agent
+          chmod +x install.sh
+          ./install.sh
+          echo "$HOME/.qitops/bin" >> $GITHUB_PATH
+          
+      - name: Configure QitOps GitHub Integration
+        run: |
+          qitops github config --token ${{ secrets.GITHUB_TOKEN }} --owner ${{ github.repository_owner }} --repo ${{ github.event.repository.name }}
+        
+      - name: Analyze PR
+        run: |
+          qitops run pr-analyze --pr ${{ github.event.pull_request.number }}
+          
+      - name: Risk Assessment
+        run: |
+          qitops run risk --diff ${{ github.event.pull_request.number }} --focus security,performance
+          
+      - name: Post Analysis as Comment
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const analysisOutput = fs.readFileSync('qitops-analysis.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: analysisOutput
+            });

@@ -1,0 +1,30 @@
+name: QitOps PR Analysis with Custom Action
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  analyze-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Analyze PR with QitOps
+        uses: ./.github/actions/qitops-action
+        with:
+          command: run pr-analyze
+          args: --pr ${{ github.event.pull_request.number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          llm-provider: openai
+          
+      - name: Risk Assessment with QitOps
+        uses: ./.github/actions/qitops-action
+        with:
+          command: run risk
+          args: --diff ${{ github.event.pull_request.number }} --focus security,performance
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          llm-provider: openai

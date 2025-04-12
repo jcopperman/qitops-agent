@@ -80,38 +80,49 @@ This project is aligned with the values of QitOps:
 
 ### Installation
 
+#### Windows
+
+```powershell
+# Clone the repository
+git clone https://github.com/jcopperman/qitops-agent.git
+cd qitops-agent
+
+# Run the installation script
+.\install.ps1
+```
+
+#### Linux/macOS
+
 ```bash
 # Clone the repository
 git clone https://github.com/jcopperman/qitops-agent.git
 cd qitops-agent
 
-# Build the project
-cargo build --release
-
-# Run the binary
-./target/release/qitops-agent --help
+# Run the installation script
+chmod +x install.sh
+./install.sh
 ```
 
 ### Basic Commands
 
 ```bash
 # Get help
-qitops-agent --help
+qitops --help
 
 # Generate test cases
-qitops-agent test-gen --path src/user/auth.rs --format markdown
+qitops run test-gen --path src/user/auth.rs --format markdown
 
 # Analyze a pull request
-qitops-agent pr-analyze --pr 123
+qitops run pr-analyze --pr 123
 
 # Estimate risk of changes
-qitops-agent risk --diff changes.diff
+qitops run risk --diff changes.diff
 
 # Generate test data
-qitops-agent test-data --schema user-profile --count 100
+qitops run test-data --schema user-profile --count 100
 
 # Start an interactive testing session
-qitops-agent session --name "Login Flow Test"
+qitops run session --name "Login Flow Test"
 ```
 
 ### LLM Management
@@ -120,16 +131,37 @@ QitOps Agent supports multiple LLM providers:
 
 ```bash
 # List available providers
-qitops-agent llm list
+qitops llm list
 
 # Add a new provider
-qitops-agent llm add --provider openai --api-key YOUR_API_KEY --model gpt-4
+qitops llm add --provider openai --api-key YOUR_API_KEY --model gpt-4
 
 # Set default provider
-qitops-agent llm default --provider ollama
+qitops llm default --provider ollama
 
 # Test a provider
-qitops-agent llm test --provider anthropic --prompt "Generate a test case for user authentication"
+qitops llm test --provider anthropic --prompt "Generate a test case for user authentication"
+```
+
+### GitHub Integration
+
+QitOps Agent integrates with GitHub for PR analysis and risk assessment:
+
+```bash
+# Configure GitHub integration
+qitops github config --token YOUR_GITHUB_TOKEN --owner username --repo repository
+
+# Check GitHub configuration status
+qitops github status
+
+# Test GitHub connection
+qitops github test
+
+# Analyze a PR directly from GitHub
+qitops run pr-analyze --pr https://github.com/username/repo/pull/123
+
+# Assess risk from a GitHub PR
+qitops run risk --diff https://github.com/username/repo/pull/123 --focus security,performance
 ```
 
 ## 🤝 Get Involved

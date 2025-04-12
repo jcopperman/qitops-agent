@@ -1,0 +1,43 @@
+{
+  "ci": {
+    "output_format": "markdown",
+    "save_output": true,
+    "output_dir": "./qitops-reports",
+    "comment_on_pr": true,
+    "fail_on_high_risk": true,
+    "risk_threshold": "medium"
+  },
+  "github": {
+    "token_env_var": "GITHUB_TOKEN",
+    "default_owner_env_var": "REPO_OWNER",
+    "default_repo_env_var": "REPO_NAME"
+  },
+  "llm": {
+    "default_provider": "openai",
+    "providers": {
+      "openai": {
+        "api_key_env_var": "OPENAI_API_KEY",
+        "default_model": "gpt-4"
+      },
+      "ollama": {
+        "api_base_env_var": "OLLAMA_API_BASE",
+        "default_model": "mistral"
+      }
+    }
+  },
+  "commands": {
+    "pr_analyze": {
+      "focus_areas": ["security", "performance", "maintainability"],
+      "max_files": 50
+    },
+    "risk": {
+      "components": ["auth", "payment", "user-data"],
+      "focus_areas": ["security", "performance"],
+      "max_diff_size": 10000
+    },
+    "test_gen": {
+      "format": "markdown",
+      "coverage": "high"
+    }
+  }
+}
