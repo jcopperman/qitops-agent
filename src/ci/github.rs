@@ -1,6 +1,10 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use std::collections::HashMap;
+use regex::Regex;
+use base64::Engine;
+use crate::ci::config::GitHubConfig;
 
 /// GitHub API error
 #[derive(Debug, Error)]
@@ -103,6 +107,59 @@ pub struct PullRequestComment {
     pub line: Option<u64>,
 }
 
+/// Repository information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Repository {
+    /// Repository ID
+    pub id: u64,
+
+    /// Repository name
+    pub name: String,
+
+    /// Repository owner
+    pub owner: String,
+
+    /// Repository description
+    pub description: Option<String>,
+
+    /// Repository URL
+    pub url: String,
+
+    /// Repository default branch
+    pub default_branch: String,
+
+    /// Repository is private
+    pub private: bool,
+
+    /// Repository language
+    pub language: Option<String>,
+
+    /// Repository created at
+    pub created_at: String,
+
+    /// Repository updated at
+    pub updated_at: String,
+}
+
+/// Commit information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Commit {
+    /// Commit SHA
+    pub sha: String,
+
+    /// Commit message
+    pub message: String,
+
+    /// Commit author
+    pub author: String,
+
+    /// Commit author email
+    pub author_email: Option<String>,
+
+    /// Commit date
+    pub date: String,
+}
+
 /// GitHub client
 pub struct GitHubClient {
     /// API token
@@ -123,6 +180,66 @@ impl GitHubClient {
             base_url: "https://api.github.com".to_string(),
             http_client: reqwest::Client::new(),
         }
+    }
+
+    /// Create a new GitHub client from config
+    pub fn from_config(config: &GitHubConfig) -> Result<Self> {
+        let token = config.token.clone()
+            .or_else(|| std::env::var("GITHUB_TOKEN").ok())
+            .ok_or_else(|| anyhow!("GitHub token not found in config or GITHUB_TOKEN environment variable"))?;
+
+        let base_url = config.api_base.clone().unwrap_or_else(|| "https://api.github.com".to_string());
+
+        Ok(Self {
+            token,
+            base_url,
+            http_client: reqwest::Client::new(),
+        })
+    }
+
+    /// Extract repository owner and name from a GitHub URL
+    pub fn extract_repo_info(url: &str) -> Result<(String, String)> {
+        // Match patterns like:
+        // - https://github.com/owner/repo
+        // - https://github.com/owner/repo.git
+        // - https://github.com/owner/repo/pull/123
+        // - git@github.com:owner/repo.git
+        let patterns = [
+            Regex::new(r"github\.com[/:]([^/]+)/([^/\.]+)(?:\.git)?(?:/.*)?$").unwrap(),
+            Regex::new(r"github\.com[/:]([^/]+)/([^/\.]+)(?:\.git)?$").unwrap(),
+        ];
+
+        for pattern in &patterns {
+            if let Some(captures) = pattern.captures(url) {
+                if captures.len() >= 3 {
+                    let owner = captures[1].to_string();
+                    let repo = captures[2].to_string();
+                    return Ok((owner, repo));
+                }
+            }
+        }
+
+        Err(anyhow!("Could not extract repository information from URL: {}", url))
+    }
+
+    /// Extract PR number from a GitHub PR URL or string
+    pub fn extract_pr_number(pr_string: &str) -> Result<u64> {
+        // Try to parse as a number first
+        if let Ok(number) = pr_string.parse::<u64>() {
+            return Ok(number);
+        }
+
+        // Try to extract from URL
+        let pattern = Regex::new(r"github\.com/[^/]+/[^/]+/pull/(\d+)(?:/.*)?$").unwrap();
+        if let Some(captures) = pattern.captures(pr_string) {
+            if captures.len() >= 2 {
+                let number = captures[1].parse::<u64>()
+                    .map_err(|_| anyhow!("Failed to parse PR number from URL: {}", pr_string))?;
+                return Ok(number);
+            }
+        }
+
+        Err(anyhow!("Could not extract PR number from: {}", pr_string))
     }
 
     /// Get a pull request by number
@@ -296,5 +413,191 @@ impl GitHubClient {
         }
 
         Ok(comments)
+    }
+
+    /// Get repository information
+    pub async fn get_repository(&self, owner: &str, repo: &str) -> Result<Repository> {
+        let url = format!("{}/repos/{}/{}", self.base_url, owner, repo);
+
+        let response = self.http_client.get(&url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("Authorization", format!("token {}", self.token))
+            .header("User-Agent", "QitOps-Agent")
+            .send()
+            .await
+            .map_err(|e| anyhow!("Failed to send request to GitHub API: {}", e))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Could not read error response".to_string());
+
+            return match status.as_u16() {
+                401 => Err(anyhow!("Authentication error: {}", error_text)),
+                403 => Err(anyhow!("Forbidden: {}", error_text)),
+                404 => Err(anyhow!("Not found: {}", error_text)),
+                422 => Err(anyhow!("Validation error: {}", error_text)),
+                _ => Err(anyhow!("GitHub API error ({}): {}", status, error_text)),
+            };
+        }
+
+        let repo_data: serde_json::Value = response.json()
+            .await
+            .map_err(|e| anyhow!("Failed to parse GitHub API response: {}", e))?;
+
+        let repository = Repository {
+            id: repo_data["id"].as_u64().unwrap_or_default(),
+            name: repo_data["name"].as_str().unwrap_or_default().to_string(),
+            owner: repo_data["owner"]["login"].as_str().unwrap_or_default().to_string(),
+            description: repo_data["description"].as_str().map(|s| s.to_string()),
+            url: repo_data["html_url"].as_str().unwrap_or_default().to_string(),
+            default_branch: repo_data["default_branch"].as_str().unwrap_or_default().to_string(),
+            private: repo_data["private"].as_bool().unwrap_or_default(),
+            language: repo_data["language"].as_str().map(|s| s.to_string()),
+            created_at: repo_data["created_at"].as_str().unwrap_or_default().to_string(),
+            updated_at: repo_data["updated_at"].as_str().unwrap_or_default().to_string(),
+        };
+
+        Ok(repository)
+    }
+
+    /// Get recent commits for a repository
+    pub async fn get_commits(&self, owner: &str, repo: &str, limit: Option<usize>) -> Result<Vec<Commit>> {
+        let limit = limit.unwrap_or(10);
+        let url = format!("{}/repos/{}/{}/commits?per_page={}", self.base_url, owner, repo, limit);
+
+        let response = self.http_client.get(&url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("Authorization", format!("token {}", self.token))
+            .header("User-Agent", "QitOps-Agent")
+            .send()
+            .await
+            .map_err(|e| anyhow!("Failed to send request to GitHub API: {}", e))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Could not read error response".to_string());
+
+            return match status.as_u16() {
+                401 => Err(anyhow!("Authentication error: {}", error_text)),
+                403 => Err(anyhow!("Forbidden: {}", error_text)),
+                404 => Err(anyhow!("Not found: {}", error_text)),
+                422 => Err(anyhow!("Validation error: {}", error_text)),
+                _ => Err(anyhow!("GitHub API error ({}): {}", status, error_text)),
+            };
+        }
+
+        let commits_data: Vec<serde_json::Value> = response.json()
+            .await
+            .map_err(|e| anyhow!("Failed to parse GitHub API response: {}", e))?;
+
+        let mut commits = Vec::new();
+        for commit_data in commits_data {
+            let commit = Commit {
+                sha: commit_data["sha"].as_str().unwrap_or_default().to_string(),
+                message: commit_data["commit"]["message"].as_str().unwrap_or_default().to_string(),
+                author: commit_data["commit"]["author"]["name"].as_str().unwrap_or_default().to_string(),
+                author_email: commit_data["commit"]["author"]["email"].as_str().map(|s| s.to_string()),
+                date: commit_data["commit"]["author"]["date"].as_str().unwrap_or_default().to_string(),
+            };
+            commits.push(commit);
+        }
+
+        Ok(commits)
+    }
+
+    /// Get file content from a repository
+    pub async fn get_file_content(&self, owner: &str, repo: &str, path: &str, branch: Option<&str>) -> Result<String> {
+        let branch_param = branch.map(|b| format!("?ref={}", b)).unwrap_or_default();
+        let url = format!("{}/repos/{}/{}/contents/{}{}",
+            self.base_url, owner, repo, path, branch_param);
+
+        let response = self.http_client.get(&url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("Authorization", format!("token {}", self.token))
+            .header("User-Agent", "QitOps-Agent")
+            .send()
+            .await
+            .map_err(|e| anyhow!("Failed to send request to GitHub API: {}", e))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Could not read error response".to_string());
+
+            return match status.as_u16() {
+                401 => Err(anyhow!("Authentication error: {}", error_text)),
+                403 => Err(anyhow!("Forbidden: {}", error_text)),
+                404 => Err(anyhow!("Not found: {}", error_text)),
+                422 => Err(anyhow!("Validation error: {}", error_text)),
+                _ => Err(anyhow!("GitHub API error ({}): {}", status, error_text)),
+            };
+        }
+
+        let file_data: serde_json::Value = response.json()
+            .await
+            .map_err(|e| anyhow!("Failed to parse GitHub API response: {}", e))?;
+
+        let content = file_data["content"].as_str()
+            .ok_or_else(|| anyhow!("File content not found"))?;
+
+        // GitHub returns base64 encoded content
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(content.replace("\n", ""))
+            .map_err(|e| anyhow!("Failed to decode file content: {}", e))?;
+
+        let content_str = String::from_utf8(decoded)
+            .map_err(|e| anyhow!("Failed to convert file content to string: {}", e))?;
+
+        Ok(content_str)
+    }
+
+    /// Create a comment on a pull request
+    pub async fn create_pull_request_comment(&self, owner: &str, repo: &str, number: u64, body: &str) -> Result<PullRequestComment> {
+        let url = format!("{}/repos/{}/{}/issues/{}/comments", self.base_url, owner, repo, number);
+
+        let payload = serde_json::json!({
+            "body": body
+        });
+
+        let response = self.http_client.post(&url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("Authorization", format!("token {}", self.token))
+            .header("User-Agent", "QitOps-Agent")
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| anyhow!("Failed to send request to GitHub API: {}", e))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Could not read error response".to_string());
+
+            return match status.as_u16() {
+                401 => Err(anyhow!("Authentication error: {}", error_text)),
+                403 => Err(anyhow!("Forbidden: {}", error_text)),
+                404 => Err(anyhow!("Not found: {}", error_text)),
+                422 => Err(anyhow!("Validation error: {}", error_text)),
+                _ => Err(anyhow!("GitHub API error ({}): {}", status, error_text)),
+            };
+        }
+
+        let comment_data: serde_json::Value = response.json()
+            .await
+            .map_err(|e| anyhow!("Failed to parse GitHub API response: {}", e))?;
+
+        let comment = PullRequestComment {
+            id: comment_data["id"].as_u64().unwrap_or_default(),
+            body: comment_data["body"].as_str().unwrap_or_default().to_string(),
+            user: comment_data["user"]["login"].as_str().unwrap_or_default().to_string(),
+            created_at: comment_data["created_at"].as_str().unwrap_or_default().to_string(),
+            updated_at: comment_data["updated_at"].as_str().unwrap_or_default().to_string(),
+            path: None,
+            line: None,
+        };
+
+        Ok(comment)
     }
 }

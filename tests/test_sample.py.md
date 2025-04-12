@@ -1,46 +1,85 @@
-Test Cases:
+ Here are the comprehensive test cases for your code in Markdown format:
 
-1. Addition (Example 1):
+```markdown
+# Add Test Cases
 
-- Input:
-  - A: 5
-  - B: 6
-  - Result: 11
+## add(positive, positive)
+- **Test Case**: `add(5, 3)` should equal `8`.
+- **Test Case**: `add(10, 2)` should equal `12`.
 
-Expected Output: Returning the sum of 5 + 6 is 11.
+## add(zero, positive)
+- **Test Case**: `add(0, 5)` should equal `5`.
+- **Test Case**: `add(-5, 0)` should equal `-5`.
 
-2. Subtraction (Example 2):
+## add(positive, zero)
+- **Test Case**: `add(5, 0)` should equal `5`.
+- **Test Case**: `add(0, 7)` should equal `7`.
 
-- Input:
-  - A: 30
-  - B: 40
-  - Result: -10
+## add(negative, positive)
+- **Test Case**: `add(-3, 4)` should equal `1`.
+- **Test Case**: `add(-9, 2)` should equal `-7`.
 
-Expected Output: Returning the difference of 30 - 40 is -10.
+## add(positive, negative)
+- **Test Case**: `add(5, -3)` should equal `2`.
+- **Test Case**: `add(9, -2)` should equal `7`.
 
-3. Multiplication (Example 3):
+## add(negative, negative)
+- **Test Case**: `add(-3, -4)` should equal `-7`.
+- **Test Case**: `add(-9, -2)` should equal `-11`.
 
-- Input:
-  - A: 12
-  - B: 8
-  - Result: 8
+# Subtract Test Cases
 
-Expected Output: Returning the product of 12 and 8 is 8.
+## subtract(positive, positive)
+- **Test Case**: `subtract(5, 3)` should equal `2`.
+- **Test Case**: `subtract(10, 2)` should equal `8`.
 
-4. Division (Example 4):
+## subtract(zero, positive)
+- **Test Case**: `subtract(0, 5)` should equal `-5`.
+- **Test Case**: `subtract(-5, 0)` should equal `5`.
 
-- Input:
-  - A: 6
-  - B: 0
-  - Raises to ZeroException: Returns the quotient of dividing by zero.
+## subtract(positive, zero)
+- **Test Case**: `subtract(5, 0)` should equal `5`.
+- **Test Case**: `subtract(0, 7)` should equal `-7`.
 
-Expected Output: Returning an exception with a message saying "Cannot divide by zero".
+## subtract(negative, positive)
+- **Test Case**: `subtract(-3, 4)` should equal `-7`.
+- **Test Case**: `subtract(-9, 2)` should equal `-11`.
 
-5. Error Handling (Example 5):
+## subtract(positive, negative)
+- **Test Case**: `subtract(5, -3)` should equal `8`.
+- **Test Case**: `subtract(9, -2)` should equal `11`.
 
-- Input:
-  - A: 6
-  - B: 0
-  - Raises to ZeroException: Returns the quotient of dividing by zero.
+## subtract(negative, negative)
+- **Test Case**: `subtract(-3, -4)` should equal `1`.
+- **Test Case**: `subtract(-9, -2)` should equal `-7`.
 
-Expected Output: Returning an exception with a message saying "Cannot divide by zero".
+# Multiply Test Cases
+
+## multiply(positive, positive)
+- **Test Case**: `multiply(5, 3)` should equal `15`.
+- **Test Case**: `multiply(10, 2)` should equal `20`.
+
+## multiply(zero, positive)
+- **Test Case**: `multiply(0, 5)` should equal `0`.
+- **Test Case**: `multiply(-5, 0)` should equal `0`.
+
+## multiply(positive, zero)
+- **Test Case**: `multiply(5, 0)` should equal `0`.
+- **Test Case**: `multiply(0, 7)` should equal `0`.
+
+## multiply(negative, positive)
+- **Test Case**: `multiply(-3, 4)` should equal `-12`.
+- **Test Case**: `multiply(-9, 2)` should equal `-18`.
+
+## multiply(positive, negative)
+- **Test Case**: `multiply(5, -3)` should equal `-15`.
+- **Test Case**: `multiply(9, -2)` should equal `-18`.
+
+## multiply(negative, negative)
+- **Test Case**: `multiply(-3, -4)` should equal `12`.
+- **Test Case**: `multiply(-9, -2)` should equal `18`.
+
+# Divide Test Cases
+
+## divide(positive, positive)
+- **Test Case**: `div

@@ -99,11 +99,9 @@ impl RiskAgent {
         focus_areas: Vec<String>,
         owner: String,
         repo: String,
-        github_token: String,
+        github_client: GitHubClient,
         llm_router: LlmRouter,
     ) -> Result<Self> {
-        let github_client = GitHubClient::new(github_token);
-
         Ok(Self {
             diff_source: pr,
             components,

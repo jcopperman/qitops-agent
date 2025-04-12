@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 
 use crate::cli::llm::LlmArgs;
+use crate::cli::github::GitHubArgs;
 
 /// QitOps Agent CLI
 #[derive(Debug, Parser)]
@@ -41,9 +42,17 @@ pub enum Command {
     /// Estimate risk of changes
     #[clap(name = "risk")]
     Risk {
-        /// Path to the diff file
+        /// Path to the diff file or PR URL/number
         #[clap(short, long)]
         diff: String,
+
+        /// Components to focus on (comma-separated)
+        #[clap(short, long)]
+        components: Option<String>,
+
+        /// Focus areas (comma-separated: security, performance, etc.)
+        #[clap(short, long)]
+        focus: Option<String>,
     },
 
     /// Generate test data
@@ -69,4 +78,8 @@ pub enum Command {
     /// LLM configuration and management
     #[clap(name = "llm")]
     Llm(LlmArgs),
+
+    /// GitHub integration
+    #[clap(name = "github")]
+    GitHub(GitHubArgs),
 }

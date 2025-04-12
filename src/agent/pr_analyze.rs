@@ -1,7 +1,5 @@
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::Path;
 
 use crate::agent::traits::{Agent, AgentResponse, AgentStatus};
 use crate::ci::github::GitHubClient;
@@ -71,15 +69,13 @@ impl PrAnalyzeAgent {
         focus: Option<String>,
         owner: String,
         repo: String,
-        github_token: String,
+        github_client: GitHubClient,
         llm_router: LlmRouter
     ) -> Result<Self> {
         let focus = match focus {
             Some(f) => PrFocus::from_str(&f)?,
             None => PrFocus::General,
         };
-
-        let github_client = GitHubClient::new(github_token);
 
         Ok(Self {
             pr,
