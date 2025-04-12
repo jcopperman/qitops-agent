@@ -8,6 +8,10 @@ readme = "README.md"
 license = "MIT"
 repository = "https://github.com/jcopperman/qitops-agent"
 
+[[bin]]
+name = "qitops"
+path = "src/main.rs"
+
 [dependencies]
 clap = { version = "4.5.1", features = ["derive"] }
 tokio = { version = "1.36.0", features = ["full"] }

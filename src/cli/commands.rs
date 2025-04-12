@@ -5,7 +5,7 @@ use crate::cli::github::GitHubArgs;
 
 /// QitOps Agent CLI
 #[derive(Debug, Parser)]
-#[clap(name = "qitops-agent", about = "QitOps Agent - An AI-powered QA Assistant")]
+#[clap(name = "qitops", about = "QitOps Agent - An AI-powered QA Assistant")]
 pub struct Cli {
     /// Enable verbose output
     #[clap(short, long)]
