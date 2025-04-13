@@ -174,6 +174,7 @@ impl SourceManager {
     fn load_from_environment(&mut self) -> Result<()> {
         // Check for QITOPS_SOURCES environment variable
         if let Ok(sources_env) = std::env::var("QITOPS_SOURCES") {
+            tracing::info!("Loading sources from QITOPS_SOURCES environment variable");
             // Format: "id1:type1:path1,id2:type2:path2"
             for source_str in sources_env.split(',') {
                 let parts: Vec<&str> = source_str.split(':').collect();
@@ -190,8 +191,13 @@ impl SourceManager {
                     };
 
                     // Create and add the source
-                    let source = Source::new(id.clone(), source_type, path, description);
-                    self.sources.insert(id, source);
+                    let source = Source::new(id.clone(), source_type.clone(), path.clone(), description.clone());
+                    self.sources.insert(id.clone(), source);
+
+                    tracing::info!("Added source from environment variable: id={}, type={}, path={}",
+                        id, source_type.to_string(), path.display());
+                } else {
+                    tracing::warn!("Invalid source format in QITOPS_SOURCES: {}", source_str);
                 }
             }
 
@@ -201,8 +207,14 @@ impl SourceManager {
 
         // Check for individual source environment variables
         // Format: QITOPS_SOURCE_<ID>="type:path[:description]"
+        let mut found_source_vars = false;
         for (key, value) in std::env::vars() {
             if key.starts_with("QITOPS_SOURCE_") {
+                if !found_source_vars {
+                    tracing::info!("Loading sources from individual environment variables");
+                    found_source_vars = true;
+                }
+
                 let id = key.strip_prefix("QITOPS_SOURCE_").unwrap().to_lowercase();
                 let parts: Vec<&str> = value.split(':').collect();
 
@@ -218,10 +230,20 @@ impl SourceManager {
                     };
 
                     // Create and add the source
-                    let source = Source::new(id.clone(), source_type, path, description);
-                    self.sources.insert(id, source);
+                    let source = Source::new(id.clone(), source_type.clone(), path.clone(), description.clone());
+                    self.sources.insert(id.clone(), source);
+
+                    tracing::info!("Added source from environment variable {}: id={}, type={}, path={}",
+                        key, id, source_type.to_string(), path.display());
+                } else {
+                    tracing::warn!("Invalid source format in {}: {}", key, value);
                 }
             }
+        }
+
+        // Check for default sources environment variable
+        if let Ok(default_sources) = std::env::var("QITOPS_DEFAULT_SOURCES") {
+            tracing::info!("Found default sources in environment variable: {}", default_sources);
         }
 
         Ok(())

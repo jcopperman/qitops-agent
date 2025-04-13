@@ -6,6 +6,7 @@ mod ci;
 mod source;
 mod persona;
 mod config;
+mod bot;
 
 use anyhow::Result;
 use clap::Parser;
@@ -14,6 +15,7 @@ use cli::llm::handle_llm_command;
 use cli::github::handle_github_command;
 use cli::source::handle_source_command;
 use cli::persona::handle_persona_command;
+use cli::bot::handle_bot_command;
 use cli::branding;
 use cli::progress::ProgressIndicator;
 use tracing::{info, error};
@@ -62,6 +64,10 @@ async fn main() -> Result<()> {
         Command::Persona(persona_args) => {
             branding::print_command_header("Persona Management");
             handle_persona_command(&persona_args).await?
+        }
+        Command::Bot(bot_args) => {
+            branding::print_command_header("QitOps Bot");
+            handle_bot_command(&bot_args).await?
         }
         Command::Version => {
             println!("QitOps Agent v{}", env!("CARGO_PKG_VERSION"));
@@ -455,7 +461,7 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
 
             // Create and execute the test data generation agent
             let progress = ProgressIndicator::new("Generating test data...");
-            let agent = TestDataAgent::new(schema, count, sources_vec, personas_vec, "json".to_string(), router).await?;
+            let agent = TestDataAgent::new(schema, count, sources_vec, "json".to_string(), router).await?;
             let result = agent.execute().await?;
             progress.finish();
 

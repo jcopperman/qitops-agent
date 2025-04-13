@@ -187,13 +187,14 @@ impl PersonaManager {
     fn load_from_environment(&mut self) -> Result<()> {
         // Check for QITOPS_PERSONAS environment variable
         if let Ok(personas_env) = std::env::var("QITOPS_PERSONAS") {
+            tracing::info!("Loading personas from QITOPS_PERSONAS environment variable");
             // Format: "id1:name1:focus1:description1,id2:name2:focus2:description2"
             for persona_str in personas_env.split(',') {
                 let parts: Vec<&str> = persona_str.split(':').collect();
                 if parts.len() >= 4 {
                     let id = parts[0].trim().to_string();
                     let name = parts[1].trim().to_string();
-                    let focus_areas = parts[2].trim().split(';').map(|s| s.trim().to_string()).collect();
+                    let focus_areas = parts[2].trim().split(';').map(|s| s.trim().to_string()).collect::<Vec<String>>();
                     let description = parts[3].trim().to_string();
 
                     // Optional prompt template
@@ -204,8 +205,13 @@ impl PersonaManager {
                     };
 
                     // Create and add the persona
-                    let persona = Persona::new(id.clone(), name, focus_areas, description, prompt_template);
-                    self.personas.insert(id, persona);
+                    let persona = Persona::new(id.clone(), name.clone(), focus_areas.clone(), description.clone(), prompt_template.clone());
+                    self.personas.insert(id.clone(), persona);
+
+                    tracing::info!("Added persona from environment variable: id={}, name={}, focus_areas={}",
+                        id, name, focus_areas.join(", "));
+                } else {
+                    tracing::warn!("Invalid persona format in QITOPS_PERSONAS: {}", persona_str);
                 }
             }
 
@@ -215,14 +221,20 @@ impl PersonaManager {
 
         // Check for individual persona environment variables
         // Format: QITOPS_PERSONA_<ID>="name:focus1;focus2:description[:prompt_template]"
+        let mut found_persona_vars = false;
         for (key, value) in std::env::vars() {
             if key.starts_with("QITOPS_PERSONA_") {
+                if !found_persona_vars {
+                    tracing::info!("Loading personas from individual environment variables");
+                    found_persona_vars = true;
+                }
+
                 let id = key.strip_prefix("QITOPS_PERSONA_").unwrap().to_lowercase();
                 let parts: Vec<&str> = value.split(':').collect();
 
                 if parts.len() >= 3 {
                     let name = parts[0].trim().to_string();
-                    let focus_areas = parts[1].trim().split(';').map(|s| s.trim().to_string()).collect();
+                    let focus_areas = parts[1].trim().split(';').map(|s| s.trim().to_string()).collect::<Vec<String>>();
                     let description = parts[2].trim().to_string();
 
                     // Optional prompt template
@@ -233,8 +245,13 @@ impl PersonaManager {
                     };
 
                     // Create and add the persona
-                    let persona = Persona::new(id.clone(), name, focus_areas, description, prompt_template);
-                    self.personas.insert(id, persona);
+                    let persona = Persona::new(id.clone(), name.clone(), focus_areas.clone(), description.clone(), prompt_template.clone());
+                    self.personas.insert(id.clone(), persona);
+
+                    tracing::info!("Added persona from environment variable {}: id={}, name={}, focus_areas={}",
+                        key, id, name, focus_areas.join(", "));
+                } else {
+                    tracing::warn!("Invalid persona format in {}: {}", key, value);
                 }
             }
         }
@@ -245,6 +262,20 @@ impl PersonaManager {
             if self.personas.contains_key(&default_persona) {
                 // We don't need to do anything here, as the default persona is specified when using the personas
                 tracing::info!("Default persona set to: {}", default_persona);
+            } else {
+                tracing::warn!("Default persona '{}' specified in environment variable QITOPS_DEFAULT_PERSONA does not exist", default_persona);
+            }
+        }
+
+        // Check for default personas environment variable
+        if let Ok(default_personas) = std::env::var("QITOPS_DEFAULT_PERSONAS") {
+            tracing::info!("Found default personas in environment variable: {}", default_personas);
+
+            // Validate that all personas exist
+            for persona_id in default_personas.split(',').map(|s| s.trim()) {
+                if !self.personas.contains_key(persona_id) {
+                    tracing::warn!("Persona '{}' specified in QITOPS_DEFAULT_PERSONAS does not exist", persona_id);
+                }
             }
         }
 

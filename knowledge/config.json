@@ -1,0 +1,15 @@
+{
+  "file_path": "~/.config/qitops/config.json",
+  "sections": {
+    "llm": "LLM provider configuration",
+    "github": "GitHub integration configuration",
+    "commands": "Command-specific configuration",
+    "sources": "Source configuration",
+    "personas": "Persona configuration"
+  },
+  "examples": [
+    "{\n  \"llm\": {\n    \"default_provider\": \"openai\",\n    \"providers\": {\n      \"openai\": {\n        \"api_key\": \"YOUR_API_KEY\",\n        \"default_model\": \"gpt-4\"\n      },\n      \"ollama\": {\n        \"api_base\": \"http://localhost:11434\",\n        \"default_model\": \"mistral\"\n      }\n    }\n  }\n}",
+    "{\n  \"commands\": {\n    \"test_gen\": {\n      \"default_format\": \"markdown\",\n      \"default_sources\": [\"requirements\", \"standards\"],\n      \"default_personas\": [\"qa-engineer\"]\n    }\n  }\n}",
+    "{\n  \"sources\": {\n    \"paths\": {\n      \"requirements\": \"docs/requirements.md\",\n      \"standards\": \"docs/standards.md\"\n    }\n  }\n}"
+  ]
+}

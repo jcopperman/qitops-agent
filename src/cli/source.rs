@@ -2,7 +2,101 @@ use anyhow::Result;
 use clap::Subcommand;
 use std::path::PathBuf;
 
-use crate::source::{SourceManager, Source, SourceType};
+// Define the Source, SourceType, and SourceManager here
+#[derive(Debug, Clone)]
+pub enum SourceType {
+    Requirements,
+    Standard,
+    Documentation,
+    Custom(String),
+}
+
+impl SourceType {
+    pub fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_str() {
+            "requirements" => Ok(SourceType::Requirements),
+            "standard" => Ok(SourceType::Standard),
+            "documentation" => Ok(SourceType::Documentation),
+            _ => Ok(SourceType::Custom(s.to_string())),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            SourceType::Requirements => "requirements".to_string(),
+            SourceType::Standard => "standard".to_string(),
+            SourceType::Documentation => "documentation".to_string(),
+            SourceType::Custom(s) => s.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Source {
+    pub id: String,
+    pub source_type: SourceType,
+    pub path: PathBuf,
+    pub description: Option<String>,
+}
+
+impl Source {
+    pub fn new(id: String, source_type: SourceType, path: PathBuf, description: Option<String>) -> Self {
+        Self {
+            id,
+            source_type,
+            path,
+            description,
+        }
+    }
+
+    pub fn get_content(&self) -> Result<String> {
+        Ok(std::fs::read_to_string(&self.path)?)
+    }
+}
+
+pub struct SourceManager {
+    sources: std::collections::HashMap<String, Source>,
+}
+
+impl SourceManager {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
+            sources: std::collections::HashMap::new(),
+        })
+    }
+
+    pub fn add_source(&mut self, source: Source) -> Result<()> {
+        self.sources.insert(source.id.clone(), source);
+        Ok(())
+    }
+
+    pub fn remove_source(&mut self, id: &str) -> Result<()> {
+        self.sources.remove(id);
+        Ok(())
+    }
+
+    pub fn get_source(&self, id: &str) -> Option<&Source> {
+        self.sources.get(id)
+    }
+
+    pub fn list_sources(&self) -> Vec<&Source> {
+        self.sources.values().collect()
+    }
+
+    pub fn get_content_for_sources(&self, sources: &[String]) -> Result<String> {
+        let mut content = String::new();
+
+        for source_id in sources {
+            if let Some(source) = self.get_source(source_id) {
+                content.push_str(&format!("# Source: {} ({})\n\n", source_id, source.source_type.to_string()));
+                content.push_str(&source.get_content()?);
+                content.push_str("\n\n");
+            }
+        }
+
+        Ok(content)
+    }
+}
 use crate::cli::branding;
 
 /// Source CLI arguments
@@ -22,24 +116,24 @@ pub enum SourceCommand {
         /// Source ID
         #[clap(short, long)]
         id: String,
-        
+
         /// Source type (requirements, standard, test-strategy, bug-history, documentation, or custom)
         #[clap(short, long)]
         type_: String,
-        
+
         /// Source path
         #[clap(short, long)]
         path: String,
-        
+
         /// Source description
         #[clap(short, long)]
         description: Option<String>,
     },
-    
+
     /// List sources
     #[clap(name = "list")]
     List,
-    
+
     /// Remove a source
     #[clap(name = "remove")]
     Remove {
@@ -47,7 +141,7 @@ pub enum SourceCommand {
         #[clap(short, long)]
         id: String,
     },
-    
+
     /// Show source content
     #[clap(name = "show")]
     Show {
@@ -78,35 +172,35 @@ pub async fn handle_source_command(args: &SourceArgs) -> Result<()> {
 /// Add a source
 async fn add_source(id: &str, type_: &str, path: &str, description: Option<String>) -> Result<()> {
     let mut source_manager = SourceManager::new()?;
-    
+
     let source_type = SourceType::from_str(type_)?;
     let source_path = PathBuf::from(path);
-    
+
     let source = Source::new(
         id.to_string(),
         source_type,
         source_path,
         description,
     );
-    
+
     source_manager.add_source(source)?;
-    
+
     branding::print_success(&format!("Source '{}' added successfully", id));
-    
+
     Ok(())
 }
 
 /// List sources
 async fn list_sources() -> Result<()> {
     let source_manager = SourceManager::new()?;
-    
+
     let sources = source_manager.list_sources();
-    
+
     if sources.is_empty() {
         println!("No sources found");
         return Ok(());
     }
-    
+
     println!("Sources:");
     for source in sources {
         println!("  ID: {}", source.id);
@@ -117,30 +211,30 @@ async fn list_sources() -> Result<()> {
         }
         println!();
     }
-    
+
     Ok(())
 }
 
 /// Remove a source
 async fn remove_source(id: &str) -> Result<()> {
     let mut source_manager = SourceManager::new()?;
-    
+
     source_manager.remove_source(id)?;
-    
+
     branding::print_success(&format!("Source '{}' removed successfully", id));
-    
+
     Ok(())
 }
 
 /// Show source content
 async fn show_source(id: &str) -> Result<()> {
     let source_manager = SourceManager::new()?;
-    
+
     let source = source_manager.get_source(id)
         .ok_or_else(|| anyhow::anyhow!("Source not found: {}", id))?;
-        
+
     let content = source.get_content()?;
-    
+
     println!("Source: {} ({})", source.id, source.source_type.to_string());
     if let Some(description) = &source.description {
         println!("Description: {}", description);
@@ -148,6 +242,6 @@ async fn show_source(id: &str) -> Result<()> {
     println!("Path: {}", source.path.display());
     println!();
     println!("{}", content);
-    
+
     Ok(())
 }

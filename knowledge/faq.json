@@ -1,0 +1,52 @@
+[
+  {
+    "question": "How do I install QitOps Agent?",
+    "answer": "You can install QitOps Agent by cloning the repository and running the installation script:\n\n```bash\ngit clone https://github.com/jcopperman/qitops-agent.git\ncd qitops-agent\nchmod +x install.sh\n./install.sh\n```\n\nOn Windows, use `install.ps1` instead of `install.sh`.",
+    "tags": ["installation", "setup"]
+  },
+  {
+    "question": "How do I configure LLM providers?",
+    "answer": "You can configure LLM providers using the `llm` command:\n\n```bash\n# Add OpenAI provider\nqitops llm add --provider openai --api-key YOUR_API_KEY --model gpt-4\n\n# Add Ollama provider\nqitops llm add --provider ollama --api-base http://localhost:11434 --model mistral\n\n# Set default provider\nqitops llm default --provider ollama\n```",
+    "tags": ["llm", "configuration"]
+  },
+  {
+    "question": "How do I configure GitHub integration?",
+    "answer": "You can configure GitHub integration using the `github` command:\n\n```bash\nqitops github config --token YOUR_GITHUB_TOKEN --owner username --repo repository\n```",
+    "tags": ["github", "configuration"]
+  },
+  {
+    "question": "How do I generate test cases?",
+    "answer": "You can generate test cases using the `test-gen` command:\n\n```bash\nqitops run test-gen --path src/module.js\n```\n\nYou can specify the output format:\n\n```bash\nqitops run test-gen --path src/module.js --format yaml\n```",
+    "tags": ["test-gen", "usage"]
+  },
+  {
+    "question": "How do I analyze a pull request?",
+    "answer": "You can analyze a pull request using the `pr-analyze` command:\n\n```bash\nqitops run pr-analyze --pr 123\n```\n\nOr by URL:\n\n```bash\nqitops run pr-analyze --pr https://github.com/username/repo/pull/123\n```",
+    "tags": ["pr-analyze", "usage"]
+  },
+  {
+    "question": "How do I assess risk of changes?",
+    "answer": "You can assess risk of changes using the `risk` command:\n\n```bash\nqitops run risk --diff changes.diff\n```\n\nOr from a PR:\n\n```bash\nqitops run risk --diff https://github.com/username/repo/pull/123\n```",
+    "tags": ["risk", "usage"]
+  },
+  {
+    "question": "How do I generate test data?",
+    "answer": "You can generate test data using the `test-data` command:\n\n```bash\nqitops run test-data --schema user-profile.json --count 10\n```",
+    "tags": ["test-data", "usage"]
+  },
+  {
+    "question": "How do I use sources and personas?",
+    "answer": "You can use sources and personas with any command by specifying the `--sources` and `--personas` options:\n\n```bash\nqitops run test-gen --path src/module.js --sources requirements,standards --personas qa-engineer\n```\n\nYou can also set default sources and personas in the configuration file or using environment variables.",
+    "tags": ["sources", "personas", "usage"]
+  },
+  {
+    "question": "How do I set up environment variables?",
+    "answer": "You can set up environment variables for QitOps Agent:\n\n```bash\n# Windows (PowerShell)\n$env:QITOPS_SOURCES = \"requirements:requirements:docs/requirements.md:Project requirements\"\n$env:QITOPS_DEFAULT_SOURCES = \"requirements\"\n$env:QITOPS_DEFAULT_PERSONAS = \"security-analyst\"\n\n# Linux/macOS\nexport QITOPS_SOURCES=\"requirements:requirements:docs/requirements.md:Project requirements\"\nexport QITOPS_DEFAULT_SOURCES=\"requirements\"\nexport QITOPS_DEFAULT_PERSONAS=\"security-analyst\"\n```",
+    "tags": ["environment", "configuration"]
+  },
+  {
+    "question": "How do I use QitOps Agent in CI/CD?",
+    "answer": "You can use QitOps Agent in CI/CD pipelines by installing it and configuring it in your CI/CD workflow. For example, in GitHub Actions:\n\n```yaml\nname: QitOps PR Analysis\n\non:\n  pull_request:\n    types: [opened, synchronize, reopened]\n\njobs:\n  analyze-pr:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n        \n      - name: Install QitOps Agent\n        run: |\n          git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent\n          cd /tmp/qitops-agent\n          chmod +x install.sh\n          ./install.sh\n          echo \"$HOME/.qitops/bin\" >> $GITHUB_PATH\n          \n      - name: Configure QitOps\n        run: |\n          qitops github config --token ${{ secrets.GITHUB_TOKEN }}\n          \n      - name: Analyze PR\n        run: |\n          qitops run pr-analyze --pr ${{ github.event.pull_request.number }}\n```",
+    "tags": ["ci/cd", "github-actions"]
+  }
+]

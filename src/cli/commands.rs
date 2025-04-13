@@ -4,10 +4,11 @@ use crate::cli::llm::LlmArgs;
 use crate::cli::github::GitHubArgs;
 use crate::cli::source::SourceArgs;
 use crate::cli::persona::PersonaArgs;
+use crate::cli::bot::BotArgs;
 
 /// QitOps Agent CLI
 #[derive(Debug, Parser)]
-#[clap(name = "qitops", about = "QitOps Agent - An AI-powered QA Assistant")]
+#[clap(name = "qitops", about = "QitOps Agent - An AI-powered QA Assistant", long_about = "QitOps Agent is an AI-powered QA Assistant that helps you improve software quality through automated analysis, testing, and risk assessment.")]
 pub struct Cli {
     /// Enable verbose output
     #[clap(short, long)]
@@ -37,13 +38,17 @@ pub enum Command {
     #[clap(name = "github")]
     GitHub(GitHubArgs),
 
-    /// Source management
-    #[clap(name = "source")]
+    /// Source management (add, list, remove, show sources)
+    #[clap(name = "source", about = "Manage sources for context-aware generation")]
     Source(SourceArgs),
 
-    /// Persona management
-    #[clap(name = "persona")]
+    /// Persona management (add, list, remove, show personas)
+    #[clap(name = "persona", about = "Manage personas for context-aware generation")]
     Persona(PersonaArgs),
+
+    /// QitOps Bot - Interactive assistant
+    #[clap(name = "bot", about = "Interactive assistant for QitOps Agent")]
+    Bot(BotArgs),
 
     /// Show version information
     #[clap(name = "version")]

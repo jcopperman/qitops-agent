@@ -1,0 +1,158 @@
+{
+  "test-gen": {
+    "name": "test-gen",
+    "description": "Generate test cases for your code",
+    "usage": "qitops run test-gen --path <file_or_directory> [options]",
+    "examples": [
+      "qitops run test-gen --path src/auth.js",
+      "qitops run test-gen --path src/auth.js --format yaml",
+      "qitops run test-gen --path src/auth.js --sources requirements,standards --personas qa-engineer"
+    ],
+    "options": {
+      "--path": "Path to the source code (required)",
+      "--format": "Output format (markdown, yaml, robot) [default: markdown]",
+      "--sources": "Sources to use (comma-separated)",
+      "--personas": "Personas to use (comma-separated)"
+    }
+  },
+  "pr-analyze": {
+    "name": "pr-analyze",
+    "description": "Analyze pull requests for potential issues",
+    "usage": "qitops run pr-analyze --pr <pr_number_or_url> [options]",
+    "examples": [
+      "qitops run pr-analyze --pr 123",
+      "qitops run pr-analyze --pr https://github.com/username/repo/pull/123",
+      "qitops run pr-analyze --pr 123 --sources requirements,standards --personas security-analyst"
+    ],
+    "options": {
+      "--pr": "PR number or URL (required)",
+      "--sources": "Sources to use (comma-separated)",
+      "--personas": "Personas to use (comma-separated)"
+    }
+  },
+  "risk": {
+    "name": "risk",
+    "description": "Estimate risk of changes",
+    "usage": "qitops run risk --diff <diff_file_or_pr> [options]",
+    "examples": [
+      "qitops run risk --diff changes.diff",
+      "qitops run risk --diff https://github.com/username/repo/pull/123",
+      "qitops run risk --diff changes.diff --components auth,payment --focus security,performance"
+    ],
+    "options": {
+      "--diff": "Path to the diff file or PR URL/number (required)",
+      "--components": "Components to focus on (comma-separated)",
+      "--focus": "Focus areas (comma-separated: security, performance, etc.)",
+      "--sources": "Sources to use (comma-separated)",
+      "--personas": "Personas to use (comma-separated)"
+    }
+  },
+  "test-data": {
+    "name": "test-data",
+    "description": "Generate test data based on schemas",
+    "usage": "qitops run test-data --schema <schema> [options]",
+    "examples": [
+      "qitops run test-data --schema user-profile.json --count 10",
+      "qitops run test-data --schema user-profile.json --count 20 --sources data-models"
+    ],
+    "options": {
+      "--schema": "Schema definition (required)",
+      "--count": "Number of records to generate [default: 10]",
+      "--sources": "Sources to use (comma-separated)",
+      "--personas": "Personas to use (comma-separated)"
+    }
+  },
+  "session": {
+    "name": "session",
+    "description": "Start an interactive testing session",
+    "usage": "qitops run session --name <session_name> [options]",
+    "examples": [
+      "qitops run session --name \"Login Flow Test\"",
+      "qitops run session --name \"API Testing\" --sources requirements,standards"
+    ],
+    "options": {
+      "--name": "Session name (required)",
+      "--sources": "Sources to use (comma-separated)",
+      "--personas": "Personas to use (comma-separated)"
+    }
+  },
+  "llm": {
+    "name": "llm",
+    "description": "Manage LLM providers",
+    "usage": "qitops llm <subcommand> [options]",
+    "examples": [
+      "qitops llm list",
+      "qitops llm add --provider openai --api-key YOUR_API_KEY --model gpt-4",
+      "qitops llm default --provider ollama"
+    ],
+    "options": {
+      "list": "List available providers",
+      "add": "Add a new provider",
+      "default": "Set default provider",
+      "test": "Test a provider"
+    }
+  },
+  "github": {
+    "name": "github",
+    "description": "GitHub integration",
+    "usage": "qitops github <subcommand> [options]",
+    "examples": [
+      "qitops github config --token YOUR_GITHUB_TOKEN --owner username --repo repository",
+      "qitops github status",
+      "qitops github test"
+    ],
+    "options": {
+      "config": "Configure GitHub integration",
+      "status": "Check GitHub configuration",
+      "test": "Test GitHub connection"
+    }
+  },
+  "source": {
+    "name": "source",
+    "description": "Manage sources for context-aware generation",
+    "usage": "qitops source <subcommand> [options]",
+    "examples": [
+      "qitops source add --id requirements --type requirements --path docs/requirements.md",
+      "qitops source list",
+      "qitops source show --id requirements",
+      "qitops source remove --id requirements"
+    ],
+    "options": {
+      "add": "Add a source",
+      "list": "List sources",
+      "show": "Show source content",
+      "remove": "Remove a source"
+    }
+  },
+  "persona": {
+    "name": "persona",
+    "description": "Manage personas for context-aware generation",
+    "usage": "qitops persona <subcommand> [options]",
+    "examples": [
+      "qitops persona add --id security-analyst --name \"Security Analyst\" --focus \"security,vulnerabilities,compliance\" --description \"Focus on security vulnerabilities and compliance issues.\"",
+      "qitops persona list",
+      "qitops persona show --id security-analyst",
+      "qitops persona remove --id security-analyst"
+    ],
+    "options": {
+      "add": "Add a persona",
+      "list": "List personas",
+      "show": "Show persona details",
+      "remove": "Remove a persona"
+    }
+  },
+  "bot": {
+    "name": "bot",
+    "description": "Interactive assistant for QitOps Agent",
+    "usage": "qitops bot <subcommand> [options]",
+    "examples": [
+      "qitops bot chat",
+      "qitops bot chat --system-prompt custom-prompt.txt --knowledge-base kb-dir"
+    ],
+    "options": {
+      "chat": "Start a chat session with QitOps Bot",
+      "--system-prompt": "System prompt file",
+      "--knowledge-base": "Knowledge base path"
+    }
+  }
+}

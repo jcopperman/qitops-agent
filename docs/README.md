@@ -11,8 +11,17 @@ Welcome to the QitOps Agent documentation! This directory contains comprehensive
 ## Configuration and Customization
 
 - [Configuration Guide](CONFIGURATION.md) - How to configure QitOps Agent
+- [Environment Variables and Configuration Quick Start](ENV_CONFIG_QUICKSTART.md) - Quick start guide for environment variables and configuration
+- [Environment Variables and Configuration Reference](ENV_CONFIG_REFERENCE.md) - Reference for environment variables and configuration
+- [Practical Examples](PRACTICAL_EXAMPLES.md) - Practical examples of using environment variables and configuration
+- [Source Management in CI/CD](SOURCE_MANAGEMENT_CI_CD.md) - How to manage sources in CI/CD environments
 - [Use Cases](USE_CASES.md) - Real-world use cases and examples
 - [CI/CD Integration](CI_CD_INTEGRATION.md) - How to integrate QitOps Agent into CI/CD pipelines
+
+## Tools and Assistants
+
+- [QitOps Bot](QITOPS_BOT.md) - Interactive assistant for learning and using QitOps Agent
+- [QitOps Bot Quick Start](QITOPS_BOT_QUICKSTART.md) - Quick start guide for QitOps Bot
 
 ## Reference
 

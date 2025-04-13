@@ -198,6 +198,24 @@ impl LlmRequest {
         self
     }
 
+    /// Add additional context to the system message
+    pub fn with_additional_context(mut self, context: String) -> Self {
+        // Check if there's already a system message
+        if let Some(system_message) = self.messages.iter_mut().find(|m| m.role == MessageRole::System) {
+            // Append the context to the existing system message
+            system_message.content = format!("{}
+
+{}", system_message.content, context);
+        } else {
+            // Add a new system message with the context
+            self.messages.insert(0, ChatMessage {
+                role: MessageRole::System,
+                content: context,
+            });
+        }
+        self
+    }
+
     /// Add an option
     pub fn with_option(mut self, key: &str, value: serde_json::Value) -> Self {
         self.options.insert(key.to_string(), value);
@@ -372,7 +390,7 @@ impl Default for RouterConfig {
                     provider_type: "ollama".to_string(),
                     api_key: None,
                     api_base: Some("http://localhost:11434".to_string()),
-                    default_model: "llama3".to_string(),
+                    default_model: "mistral".to_string(),
                     options: HashMap::new(),
                 },
                 ProviderConfig {
@@ -576,5 +594,10 @@ impl LlmRouter {
     /// Get the default model for the default provider
     pub fn default_model(&self) -> Option<String> {
         self.default_model_for_provider(&self.default_client)
+    }
+
+    /// Get a client by provider name
+    pub fn get_client(&self, provider: &str) -> Option<&Arc<dyn LlmClient>> {
+        self.clients.get(provider)
     }
 }

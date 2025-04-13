@@ -105,7 +105,7 @@ impl TestGenAgent {
         // Add sources if available
         if let Some(sources) = &self.sources {
             if !sources.is_empty() {
-                let source_manager = crate::source::SourceManager::new()?;
+                let source_manager = crate::cli::source::SourceManager::new()?;
                 let source_content = source_manager.get_content_for_sources(sources)?;
 
                 if !source_content.is_empty() {
@@ -118,7 +118,7 @@ impl TestGenAgent {
         // Add personas if available
         if let Some(personas) = &self.personas {
             if !personas.is_empty() {
-                let persona_manager = crate::persona::PersonaManager::new()?;
+                let persona_manager = crate::cli::persona::PersonaManager::new()?;
                 let persona_prompt = persona_manager.get_prompt_for_personas(personas)?;
 
                 if !persona_prompt.is_empty() {

@@ -1,0 +1,122 @@
+[
+  {
+    "title": "Basic Test Generation",
+    "description": "Generate test cases for a file",
+    "code": "qitops run test-gen --path src/auth.js",
+    "tags": ["test-gen", "basic"]
+  },
+  {
+    "title": "Test Generation with YAML Format",
+    "description": "Generate test cases in YAML format",
+    "code": "qitops run test-gen --path src/auth.js --format yaml",
+    "tags": ["test-gen", "yaml"]
+  },
+  {
+    "title": "Test Generation with Sources and Personas",
+    "description": "Generate test cases using sources and personas",
+    "code": "qitops run test-gen --path src/auth.js --sources requirements,standards --personas qa-engineer",
+    "tags": ["test-gen", "sources", "personas"]
+  },
+  {
+    "title": "PR Analysis by Number",
+    "description": "Analyze a PR by number",
+    "code": "qitops run pr-analyze --pr 123",
+    "tags": ["pr-analyze", "basic"]
+  },
+  {
+    "title": "PR Analysis by URL",
+    "description": "Analyze a PR by URL",
+    "code": "qitops run pr-analyze --pr https://github.com/username/repo/pull/123",
+    "tags": ["pr-analyze", "url"]
+  },
+  {
+    "title": "PR Analysis with Security Focus",
+    "description": "Analyze a PR with a focus on security",
+    "code": "qitops run pr-analyze --pr 123 --personas security-analyst",
+    "tags": ["pr-analyze", "security"]
+  },
+  {
+    "title": "Risk Assessment from Diff File",
+    "description": "Assess risk from a diff file",
+    "code": "qitops run risk --diff changes.diff",
+    "tags": ["risk", "diff"]
+  },
+  {
+    "title": "Risk Assessment from PR",
+    "description": "Assess risk from a PR",
+    "code": "qitops run risk --diff https://github.com/username/repo/pull/123",
+    "tags": ["risk", "pr"]
+  },
+  {
+    "title": "Risk Assessment with Component Focus",
+    "description": "Assess risk with a focus on specific components",
+    "code": "qitops run risk --diff changes.diff --components auth,payment",
+    "tags": ["risk", "components"]
+  },
+  {
+    "title": "Test Data Generation",
+    "description": "Generate test data based on a schema",
+    "code": "qitops run test-data --schema user-profile.json --count 10",
+    "tags": ["test-data", "basic"]
+  },
+  {
+    "title": "Test Data Generation with Sources",
+    "description": "Generate test data using sources",
+    "code": "qitops run test-data --schema user-profile.json --sources data-models",
+    "tags": ["test-data", "sources"]
+  },
+  {
+    "title": "Interactive Testing Session",
+    "description": "Start an interactive testing session",
+    "code": "qitops run session --name \"Login Flow Test\"",
+    "tags": ["session", "basic"]
+  },
+  {
+    "title": "Adding OpenAI Provider",
+    "description": "Add OpenAI as an LLM provider",
+    "code": "qitops llm add --provider openai --api-key YOUR_API_KEY --model gpt-4",
+    "tags": ["llm", "openai"]
+  },
+  {
+    "title": "Adding Ollama Provider",
+    "description": "Add Ollama as an LLM provider",
+    "code": "qitops llm add --provider ollama --api-base http://localhost:11434 --model mistral",
+    "tags": ["llm", "ollama"]
+  },
+  {
+    "title": "Setting Default LLM Provider",
+    "description": "Set the default LLM provider",
+    "code": "qitops llm default --provider ollama",
+    "tags": ["llm", "default"]
+  },
+  {
+    "title": "Configuring GitHub Integration",
+    "description": "Configure GitHub integration",
+    "code": "qitops github config --token YOUR_GITHUB_TOKEN --owner username --repo repository",
+    "tags": ["github", "config"]
+  },
+  {
+    "title": "Adding a Source",
+    "description": "Add a source for context-aware generation",
+    "code": "qitops source add --id requirements --type requirements --path docs/requirements.md --description \"Project requirements\"",
+    "tags": ["source", "add"]
+  },
+  {
+    "title": "Adding a Persona",
+    "description": "Add a persona for context-aware generation",
+    "code": "qitops persona add --id security-analyst --name \"Security Analyst\" --focus \"security,vulnerabilities,compliance\" --description \"Focus on security vulnerabilities and compliance issues.\"",
+    "tags": ["persona", "add"]
+  },
+  {
+    "title": "Using Environment Variables for Sources",
+    "description": "Set up environment variables for sources",
+    "code": "# Windows (PowerShell)\n$env:QITOPS_SOURCES = \"requirements:requirements:docs/requirements.md:Project requirements\"\n$env:QITOPS_DEFAULT_SOURCES = \"requirements\"\n\n# Linux/macOS\nexport QITOPS_SOURCES=\"requirements:requirements:docs/requirements.md:Project requirements\"\nexport QITOPS_DEFAULT_SOURCES=\"requirements\"",
+    "tags": ["environment", "sources"]
+  },
+  {
+    "title": "Using Environment Variables for Personas",
+    "description": "Set up environment variables for personas",
+    "code": "# Windows (PowerShell)\n$env:QITOPS_PERSONAS = \"security-analyst:Security Analyst:security;vulnerabilities;compliance:Focus on security vulnerabilities and compliance issues.\"\n$env:QITOPS_DEFAULT_PERSONAS = \"security-analyst\"\n\n# Linux/macOS\nexport QITOPS_PERSONAS=\"security-analyst:Security Analyst:security;vulnerabilities;compliance:Focus on security vulnerabilities and compliance issues.\"\nexport QITOPS_DEFAULT_PERSONAS=\"security-analyst\"",
+    "tags": ["environment", "personas"]
+  }
+]
