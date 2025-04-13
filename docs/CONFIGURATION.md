@@ -82,19 +82,73 @@ You can manually edit the configuration file:
 
 #### Using Environment Variables
 
-You can set environment variables for sensitive information:
+You can set environment variables for sensitive information and configuration:
 
 ```bash
 # Windows (PowerShell)
+# LLM Configuration
 $env:OPENAI_API_KEY = "your-api-key"
 $env:ANTHROPIC_API_KEY = "your-api-key"
 $env:OLLAMA_API_BASE = "http://localhost:11434"
 
+# GitHub Configuration
+$env:GITHUB_TOKEN = "your-github-token"
+
+# Sources Configuration
+$env:QITOPS_SOURCES = "requirements:requirements:docs/requirements.md:Project requirements,standards:standard:docs/standards.md:Coding standards"
+$env:QITOPS_SOURCE_DATA_MODELS = "documentation:docs/data-models.json:Data models documentation"
+$env:QITOPS_DEFAULT_SOURCES = "requirements,standards"
+
+# Personas Configuration
+$env:QITOPS_PERSONAS = "security-analyst:Security Analyst:security;vulnerabilities;compliance:Focus on security vulnerabilities and compliance issues."
+$env:QITOPS_PERSONA_COMPLIANCE = "Compliance Officer:compliance;regulations;standards:Focus on regulatory compliance and standards adherence."
+$env:QITOPS_DEFAULT_PERSONAS = "security-analyst"
+
 # Linux/macOS
+# LLM Configuration
 export OPENAI_API_KEY="your-api-key"
 export ANTHROPIC_API_KEY="your-api-key"
 export OLLAMA_API_BASE="http://localhost:11434"
+
+# GitHub Configuration
+export GITHUB_TOKEN="your-github-token"
+
+# Sources Configuration
+export QITOPS_SOURCES="requirements:requirements:docs/requirements.md:Project requirements,standards:standard:docs/standards.md:Coding standards"
+export QITOPS_SOURCE_DATA_MODELS="documentation:docs/data-models.json:Data models documentation"
+export QITOPS_DEFAULT_SOURCES="requirements,standards"
+
+# Personas Configuration
+export QITOPS_PERSONAS="security-analyst:Security Analyst:security;vulnerabilities;compliance:Focus on security vulnerabilities and compliance issues."
+export QITOPS_PERSONA_COMPLIANCE="Compliance Officer:compliance;regulations;standards:Focus on regulatory compliance and standards adherence."
+export QITOPS_DEFAULT_PERSONAS="security-analyst"
 ```
+
+##### Environment Variable Formats
+
+**QITOPS_SOURCES**
+Defines multiple sources in a single environment variable.
+Format: `id1:type1:path1[:description1],id2:type2:path2[:description2]`
+
+**QITOPS_SOURCE_<ID>**
+Defines a single source with the specified ID.
+Format: `type:path[:description]`
+
+**QITOPS_DEFAULT_SOURCES**
+Defines the default sources to use when no sources are specified.
+Format: `id1,id2,id3`
+
+**QITOPS_PERSONAS**
+Defines multiple personas in a single environment variable.
+Format: `id1:name1:focus1;focus2:description1[:prompt_template1],id2:name2:focus1;focus2:description2[:prompt_template2]`
+
+**QITOPS_PERSONA_<ID>**
+Defines a single persona with the specified ID.
+Format: `name:focus1;focus2:description[:prompt_template]`
+
+**QITOPS_DEFAULT_PERSONAS**
+Defines the default personas to use when no personas are specified.
+Format: `id1,id2,id3`
 
 ### Task-Specific LLM Providers
 
@@ -220,22 +274,52 @@ You can create a custom configuration file and use it with QitOps Agent:
   "commands": {
     "test_gen": {
       "default_format": "markdown",
-      "default_coverage": "high"
+      "default_coverage": "high",
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["qa-engineer"]
     },
     "pr_analyze": {
-      "default_focus": ["security", "performance"]
+      "default_focus": ["security", "performance"],
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["security-analyst"]
     },
     "risk": {
       "default_components": ["auth", "payment"],
-      "default_focus": ["security"]
+      "default_focus": ["security"],
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["security-analyst"]
     },
     "test_data": {
       "default_count": 10,
-      "default_format": "json"
+      "default_format": "json",
+      "default_sources": ["data-models"],
+      "default_personas": ["qa-engineer"]
     }
+  },
+  "sources": {
+    "default": "requirements",
+    "paths": {
+      "requirements": "docs/requirements.md",
+      "standards": "docs/standards.md",
+      "data-models": "docs/data-models.json"
+    }
+  },
+  "personas": {
+    "default": "qa-engineer"
   }
 }
 ```
+
+#### Configuration File Structure
+
+**commands**
+Command-specific configuration, including default sources and personas for each command.
+
+**sources**
+Source configuration, including default source and paths to source files.
+
+**personas**
+Persona configuration, including default persona.
 
 ### Configuration Precedence
 

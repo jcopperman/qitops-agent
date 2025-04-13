@@ -9,16 +9,16 @@ use std::path::{Path, PathBuf};
 pub struct Persona {
     /// Persona ID
     pub id: String,
-    
+
     /// Persona name
     pub name: String,
-    
+
     /// Focus areas
     pub focus_areas: Vec<String>,
-    
+
     /// Persona description
     pub description: String,
-    
+
     /// Prompt template
     pub prompt_template: Option<String>,
 }
@@ -40,13 +40,13 @@ impl Persona {
             prompt_template,
         }
     }
-    
+
     /// Get prompt for persona
     pub fn get_prompt(&self) -> String {
         if let Some(template) = &self.prompt_template {
             return template.clone();
         }
-        
+
         // Default prompt template
         format!(
             "You are acting as a {} with expertise in {}. {}\n\n",
@@ -67,7 +67,7 @@ pub struct PersonaManagerConfig {
 impl Default for PersonaManagerConfig {
     fn default() -> Self {
         let mut personas = HashMap::new();
-        
+
         // Add default personas
         personas.insert(
             "developer".to_string(),
@@ -79,7 +79,7 @@ impl Default for PersonaManagerConfig {
                 None,
             ),
         );
-        
+
         personas.insert(
             "qa-engineer".to_string(),
             Persona::new(
@@ -90,7 +90,7 @@ impl Default for PersonaManagerConfig {
                 None,
             ),
         );
-        
+
         personas.insert(
             "security-analyst".to_string(),
             Persona::new(
@@ -101,7 +101,7 @@ impl Default for PersonaManagerConfig {
                 None,
             ),
         );
-        
+
         personas.insert(
             "performance-engineer".to_string(),
             Persona::new(
@@ -112,7 +112,7 @@ impl Default for PersonaManagerConfig {
                 None,
             ),
         );
-        
+
         Self {
             personas,
         }
@@ -123,7 +123,7 @@ impl Default for PersonaManagerConfig {
 pub struct PersonaManager {
     /// Personas
     personas: HashMap<String, Persona>,
-    
+
     /// Configuration path
     config_path: PathBuf,
 }
@@ -141,97 +141,171 @@ impl PersonaManager {
                 .map_err(|_| anyhow!("HOME environment variable not set"))?;
             PathBuf::from(home).join(".config").join("qitops")
         };
-        
+
         // Create config directory if it doesn't exist
         if !config_dir.exists() {
             fs::create_dir_all(&config_dir)
                 .map_err(|e| anyhow!("Failed to create config directory: {}", e))?;
         }
-        
+
         // Config file path
         let config_path = config_dir.join("personas.json");
-        
+
         // Load config if it exists, otherwise create default
         let config = if config_path.exists() {
             let config_str = fs::read_to_string(&config_path)
                 .map_err(|e| anyhow!("Failed to read config file: {}", e))?;
-                
+
             serde_json::from_str(&config_str)
                 .map_err(|e| anyhow!("Failed to parse config file: {}", e))?
         } else {
             let default_config = PersonaManagerConfig::default();
-            
+
             // Save default config
             let config_str = serde_json::to_string_pretty(&default_config)
                 .map_err(|e| anyhow!("Failed to serialize config: {}", e))?;
-                
+
             fs::write(&config_path, config_str)
                 .map_err(|e| anyhow!("Failed to write config file: {}", e))?;
-                
+
             default_config
         };
-        
-        Ok(Self {
+
+        // Create persona manager
+        let mut persona_manager = Self {
             personas: config.personas,
             config_path,
-        })
+        };
+
+        // Check for environment variables
+        persona_manager.load_from_environment()?;
+
+        Ok(persona_manager)
     }
-    
+
+    /// Load personas from environment variables
+    fn load_from_environment(&mut self) -> Result<()> {
+        // Check for QITOPS_PERSONAS environment variable
+        if let Ok(personas_env) = std::env::var("QITOPS_PERSONAS") {
+            // Format: "id1:name1:focus1:description1,id2:name2:focus2:description2"
+            for persona_str in personas_env.split(',') {
+                let parts: Vec<&str> = persona_str.split(':').collect();
+                if parts.len() >= 4 {
+                    let id = parts[0].trim().to_string();
+                    let name = parts[1].trim().to_string();
+                    let focus_areas = parts[2].trim().split(';').map(|s| s.trim().to_string()).collect();
+                    let description = parts[3].trim().to_string();
+
+                    // Optional prompt template
+                    let prompt_template = if parts.len() > 4 {
+                        Some(parts[4].trim().to_string())
+                    } else {
+                        None
+                    };
+
+                    // Create and add the persona
+                    let persona = Persona::new(id.clone(), name, focus_areas, description, prompt_template);
+                    self.personas.insert(id, persona);
+                }
+            }
+
+            // Save the updated configuration
+            self.save_config()?;
+        }
+
+        // Check for individual persona environment variables
+        // Format: QITOPS_PERSONA_<ID>="name:focus1;focus2:description[:prompt_template]"
+        for (key, value) in std::env::vars() {
+            if key.starts_with("QITOPS_PERSONA_") {
+                let id = key.strip_prefix("QITOPS_PERSONA_").unwrap().to_lowercase();
+                let parts: Vec<&str> = value.split(':').collect();
+
+                if parts.len() >= 3 {
+                    let name = parts[0].trim().to_string();
+                    let focus_areas = parts[1].trim().split(';').map(|s| s.trim().to_string()).collect();
+                    let description = parts[2].trim().to_string();
+
+                    // Optional prompt template
+                    let prompt_template = if parts.len() > 3 {
+                        Some(parts[3].trim().to_string())
+                    } else {
+                        None
+                    };
+
+                    // Create and add the persona
+                    let persona = Persona::new(id.clone(), name, focus_areas, description, prompt_template);
+                    self.personas.insert(id, persona);
+                }
+            }
+        }
+
+        // Check for default persona environment variable
+        if let Ok(default_persona) = std::env::var("QITOPS_DEFAULT_PERSONA") {
+            // Ensure the persona exists
+            if self.personas.contains_key(&default_persona) {
+                // We don't need to do anything here, as the default persona is specified when using the personas
+                tracing::info!("Default persona set to: {}", default_persona);
+            }
+        }
+
+        Ok(())
+    }
+
     /// Add a persona
     pub fn add_persona(&mut self, persona: Persona) -> Result<()> {
         // Add persona
         self.personas.insert(persona.id.clone(), persona);
-        
+
         // Save config
         self.save_config()
     }
-    
+
     /// Get a persona
     pub fn get_persona(&self, id: &str) -> Option<&Persona> {
         self.personas.get(id)
     }
-    
+
     /// List personas
     pub fn list_personas(&self) -> Vec<&Persona> {
         self.personas.values().collect()
     }
-    
+
     /// Remove a persona
     pub fn remove_persona(&mut self, id: &str) -> Result<()> {
         if self.personas.remove(id).is_none() {
             return Err(anyhow!("Persona not found: {}", id));
         }
-        
+
         // Save config
         self.save_config()
     }
-    
+
     /// Get prompt for personas
     pub fn get_prompt_for_personas(&self, ids: &[String]) -> Result<String> {
         let mut prompt = String::new();
-        
+
         for id in ids {
             let persona = self.get_persona(id)
                 .ok_or_else(|| anyhow!("Persona not found: {}", id))?;
-                
+
             prompt.push_str(&persona.get_prompt());
         }
-        
+
         Ok(prompt)
     }
-    
+
     /// Save config
     fn save_config(&self) -> Result<()> {
         let config = PersonaManagerConfig {
             personas: self.personas.clone(),
         };
-        
+
         let config_str = serde_json::to_string_pretty(&config)
             .map_err(|e| anyhow!("Failed to serialize config: {}", e))?;
-            
+
         fs::write(&self.config_path, config_str)
             .map_err(|e| anyhow!("Failed to write config file: {}", e))?;
-            
+
         Ok(())
     }
 }

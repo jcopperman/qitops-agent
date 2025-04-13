@@ -5,6 +5,7 @@ mod plugin;
 mod ci;
 mod source;
 mod persona;
+mod config;
 
 use anyhow::Result;
 use clap::Parser;
@@ -21,6 +22,7 @@ use tracing_subscriber;
 use agent::{TestGenAgent, PrAnalyzeAgent, RiskAgent, TestDataAgent, AgentStatus};
 use agent::traits::Agent;
 use llm::{ConfigManager, LlmRouter};
+use config::QitOpsConfigManager;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -90,17 +92,36 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
             let router = LlmRouter::new(config_manager.get_config().clone()).await?;
             progress.finish();
 
+            // Get QitOps configuration
+            let qitops_config_manager = QitOpsConfigManager::new()?;
+
             // Parse sources and personas
             let sources_vec = if let Some(sources) = sources {
+                // Use sources from command line
                 Some(sources.split(',').map(|s| s.trim().to_string()).collect())
             } else {
-                None
+                // Use default sources from configuration
+                let default_sources = qitops_config_manager.get_default_sources("test-gen");
+                if !default_sources.is_empty() {
+                    info!("Using default sources: {}", default_sources.join(", "));
+                    Some(default_sources)
+                } else {
+                    None
+                }
             };
 
             let personas_vec = if let Some(personas) = personas {
+                // Use personas from command line
                 Some(personas.split(',').map(|s| s.trim().to_string()).collect())
             } else {
-                None
+                // Use default personas from configuration
+                let default_personas = qitops_config_manager.get_default_personas("test-gen");
+                if !default_personas.is_empty() {
+                    info!("Using default personas: {}", default_personas.join(", "));
+                    Some(default_personas)
+                } else {
+                    None
+                }
             };
 
             // Create and execute the test generation agent
@@ -126,13 +147,39 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
             branding::print_command_header("Analyzing Pull Request");
             info!("Analyzing PR: {}", pr);
 
-            if let Some(sources) = &sources {
-                info!("Using sources: {}", sources);
-            }
+            // Get QitOps configuration
+            let qitops_config_manager = QitOpsConfigManager::new()?;
 
-            if let Some(personas) = &personas {
+            // Parse sources and personas
+            let sources_vec = if let Some(sources) = sources.clone() {
+                // Use sources from command line
+                info!("Using sources: {}", sources);
+                sources.split(',').map(|s| s.trim().to_string()).collect()
+            } else {
+                // Use default sources from configuration
+                let default_sources = qitops_config_manager.get_default_sources("pr-analyze");
+                if !default_sources.is_empty() {
+                    info!("Using default sources: {}", default_sources.join(", "));
+                    default_sources
+                } else {
+                    Vec::new()
+                }
+            };
+
+            let personas_vec = if let Some(personas) = personas.clone() {
+                // Use personas from command line
                 info!("Using personas: {}", personas);
-            }
+                personas.split(',').map(|s| s.trim().to_string()).collect()
+            } else {
+                // Use default personas from configuration
+                let default_personas = qitops_config_manager.get_default_personas("pr-analyze");
+                if !default_personas.is_empty() {
+                    info!("Using default personas: {}", default_personas.join(", "));
+                    default_personas
+                } else {
+                    Vec::new()
+                }
+            };
 
             // Get GitHub configuration
             let github_config_manager = ci::GitHubConfigManager::new()?;
@@ -209,13 +256,39 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
             branding::print_command_header("Estimating Risk");
             info!("Estimating risk for diff: {}", diff);
 
-            if let Some(sources) = &sources {
-                info!("Using sources: {}", sources);
-            }
+            // Get QitOps configuration
+            let qitops_config_manager = QitOpsConfigManager::new()?;
 
-            if let Some(personas) = &personas {
+            // Parse sources and personas
+            let sources_vec = if let Some(sources) = sources.clone() {
+                // Use sources from command line
+                info!("Using sources: {}", sources);
+                sources.split(',').map(|s| s.trim().to_string()).collect()
+            } else {
+                // Use default sources from configuration
+                let default_sources = qitops_config_manager.get_default_sources("risk");
+                if !default_sources.is_empty() {
+                    info!("Using default sources: {}", default_sources.join(", "));
+                    default_sources
+                } else {
+                    Vec::new()
+                }
+            };
+
+            let personas_vec = if let Some(personas) = personas.clone() {
+                // Use personas from command line
                 info!("Using personas: {}", personas);
-            }
+                personas.split(',').map(|s| s.trim().to_string()).collect()
+            } else {
+                // Use default personas from configuration
+                let default_personas = qitops_config_manager.get_default_personas("risk");
+                if !default_personas.is_empty() {
+                    info!("Using default personas: {}", default_personas.join(", "));
+                    default_personas
+                } else {
+                    Vec::new()
+                }
+            };
 
             // Parse components and focus areas
             let components = components
@@ -340,13 +413,39 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
             branding::print_command_header("Generating Test Data");
             info!("Generating {} test data records for schema: {}", count, schema);
 
-            if let Some(sources) = &sources {
-                info!("Using sources: {}", sources);
-            }
+            // Get QitOps configuration
+            let qitops_config_manager = QitOpsConfigManager::new()?;
 
-            if let Some(personas) = &personas {
+            // Parse sources and personas
+            let sources_vec = if let Some(sources) = sources.clone() {
+                // Use sources from command line
+                info!("Using sources: {}", sources);
+                sources.split(',').map(|s| s.trim().to_string()).collect()
+            } else {
+                // Use default sources from configuration
+                let default_sources = qitops_config_manager.get_default_sources("test-data");
+                if !default_sources.is_empty() {
+                    info!("Using default sources: {}", default_sources.join(", "));
+                    default_sources
+                } else {
+                    Vec::new()
+                }
+            };
+
+            let personas_vec = if let Some(personas) = personas.clone() {
+                // Use personas from command line
                 info!("Using personas: {}", personas);
-            }
+                personas.split(',').map(|s| s.trim().to_string()).collect()
+            } else {
+                // Use default personas from configuration
+                let default_personas = qitops_config_manager.get_default_personas("test-data");
+                if !default_personas.is_empty() {
+                    info!("Using default personas: {}", default_personas.join(", "));
+                    default_personas
+                } else {
+                    Vec::new()
+                }
+            };
 
             // Initialize LLM router
             let progress = ProgressIndicator::new("Initializing LLM router...");
@@ -356,7 +455,7 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
 
             // Create and execute the test data generation agent
             let progress = ProgressIndicator::new("Generating test data...");
-            let agent = TestDataAgent::new(schema, count, Vec::new(), "json".to_string(), router).await?;
+            let agent = TestDataAgent::new(schema, count, sources_vec, personas_vec, "json".to_string(), router).await?;
             let result = agent.execute().await?;
             progress.finish();
 
@@ -377,13 +476,39 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
             branding::print_command_header("Starting Interactive Testing Session");
             info!("Starting interactive testing session: {}", name);
 
-            if let Some(sources) = &sources {
-                info!("Using sources: {}", sources);
-            }
+            // Get QitOps configuration
+            let qitops_config_manager = QitOpsConfigManager::new()?;
 
-            if let Some(personas) = &personas {
+            // Parse sources and personas
+            let sources_vec = if let Some(sources) = sources.clone() {
+                // Use sources from command line
+                info!("Using sources: {}", sources);
+                sources.split(',').map(|s| s.trim().to_string()).collect()
+            } else {
+                // Use default sources from configuration
+                let default_sources = qitops_config_manager.get_default_sources("session");
+                if !default_sources.is_empty() {
+                    info!("Using default sources: {}", default_sources.join(", "));
+                    default_sources
+                } else {
+                    Vec::new()
+                }
+            };
+
+            let personas_vec = if let Some(personas) = personas.clone() {
+                // Use personas from command line
                 info!("Using personas: {}", personas);
-            }
+                personas.split(',').map(|s| s.trim().to_string()).collect()
+            } else {
+                // Use default personas from configuration
+                let default_personas = qitops_config_manager.get_default_personas("session");
+                if !default_personas.is_empty() {
+                    info!("Using default personas: {}", default_personas.join(", "));
+                    default_personas
+                } else {
+                    Vec::new()
+                }
+            };
             // TODO: Implement interactive testing session
             branding::print_info("This feature is coming soon!");
         }

@@ -1,118 +1,61 @@
-# Test Cases for Email Validation Function
+ # Email Validation Test Cases
 
-## Basic Scenarios
+## Correct Emails
 
-```markdown
-- **Test Case 1:**
-    * Input: `test@example.com`
-    * Expected Output: `true`
+1. `test@example.com` - Should pass
+2. `john_doe@domain.co.uk` - Should pass
+3. `user123456789@subdomain.maindomain.net` - Should pass
+4. `user-123_456@example.org` - Should pass
 
-- **Test Case 2:**
-    * Input: `invalid_email`
-    * Expected Output: `false`
+## Incorrect Emails (Edge Cases and Error Handling)
 
-- **Test Case 3:**
-    * Input: `test.com`
-    * Expected Output: `false`
+1. `test@example.com` - Should fail (Incorrect TLD)
+2. `test@example..com` - Should fail (Multiple dots)
+3. `test@.example.com` - Should fail (Missing domain)
+4. `testemail@@example.com` - Should fail (Extra @ symbol)
+5. `test.email@.example` - Should fail (Missing TLD)
+6. `empty@example.com` - Should fail (Empty email address)
+7. `test_email#example.com` - Should fail (Invalid character)
+8. `test@1example.com` - Should fail (Too few domain parts)
+9. `test@example.cctld` - Should fail (Unknown TLD)
+10. `test@[123].com` - Should fail (IPv4 address in domain part)
 
-- **Test Case 4:**
-    * Input: `test@example`
-    * Expected Output: `false`
-```
+# Password Validation Test Cases
 
-## Edge Cases and Error Handling
+## Correct Passwords
 
-```markdown
-- **Test Case 5:**
-    * Input: `" "` (empty string)
-    * Expected Output: `false`
+1. `Pas$w0rd1!` - Should pass (Minimum requirements met)
+2. `John_Doe#2021` - Should pass (Minimum requirements met)
+3. `AaBbCc12345` - Should pass (Minimum requirements met)
 
-- **Test Case 6:**
-    * Input: `test@.com`
-    * Expected Output: `false`
+## Incorrect Passwords (Edge Cases and Error Handling)
 
-- **Test Case 7:**
-    * Input: `test@example.com` (wrong TLD)
-    * Expected Output: `false`
+1. `Password` - Should fail (Too short: < 8 characters)
+2. `password123` - Should fail (Missing uppercase letter)
+3. `pAssw0rd` - Should fail (Missing number)
+4. `Password!2` - Should fail (Incorrect special character)
+5. `12345678` - Should fail (Too short: < 8 characters)
+6. `ABCabc123` - Should fail (Missing number)
+7. `Password#2021` - Should fail (Extra special character)
+8. ` password` - Should fail (Case sensitivity)
+9. `Password!` - Should fail (Too short: < 8 characters)
+10. `123456789` - Should fail (Missing uppercase letter or number)
 
-- **Test Case 8:**
-    * Input: `test@example..com` (multiple dots)
-    * Expected Output: `false`
-```
+# Username Validation Test Cases
 
-# Test Cases for Password Validation Function
+## Correct Usernames
 
-## Basic Scenarios
+1. `john_doe` - Should pass
+2. `user123_456` - Should pass
+3. `User_One-Two` - Should pass
 
-```markdown
-- **Test Case 1:**
-    * Input: `Password1234` (8 characters, uppercase, lowercase, number)
-    * Expected Output: `true`
+## Incorrect Usernames (Edge Cases and Error Handling)
 
-- **Test Case 2:**
-    * Input: `passw0rd!` (short, with special character)
-    * Expected Output: `false`
-```
-
-## Edge Cases and Error Handling
-
-```markdown
-- **Test Case 3:**
-    * Input: `passw0rd!12345678901` (too long)
-    * Expected Output: `false`
-
-- **Test Case 4:**
-    * Input: `Password12345` (short and no number)
-    * Expected Output: `false`
-
-- **Test Case 5:**
-    * Input: `PASSWORD!1234` (no lowercase)
-    * Expected Output: `false`
-```
-
-# Test Cases for Username Validation Function
-
-## Basic Scenarios
-
-```markdown
-- **Test Case 1:**
-    * Input: `testUsername`
-    * Expected Output: `true`
-
-- **Test Case 2:**
-    * Input: `user_NAME` (with underscore)
-    * Expected Output: `true`
-
-- **Test Case 3:**
-    * Input: `1234567890123` (too long)
-    * Expected Output: `false`
-```
-
-## Edge Cases and Error Handling
-
-```markdown
-- **Test Case 4:**
-    * Input: `` (empty string)
-    * Expected Output: `false`
-
-- **Test Case 5:**
-    * Input: `test_` (no characters after underscore)
-    * Expected Output: `false`
-
-- **Test Case 6:**
-    * Input: ` testUsername` (leading space)
-    * Expected Output: `false`
-```
-
-# Additional Test Cases for All Functions
-
-## Empty Input
-
-```markdown
-- **Test Case 1:**
-    * Input: `""` (empty string for all functions)
-    * Expected Output:
-        + For email validation: `false`
-        + For password validation: `undefined` (since the function returns `true` when conditions are met and throws an error if they are not, an empty string would trigger an error which is not tested here)
-        + For username validation: `false`
-```
+1. `123` - Should fail (Too short: < 3 characters)
+2. `username22` - Should fail (Too long: > 20 characters)
+3. `$user-name` - Should fail (Invalid character)
+4. `__user__` - Should fail (Consecutive underscores)
+5. `user-example.com` - Should fail (Invalid character in username)
+6. `user-123abc` - Should fail (Uppercase letter after numbers)
+7. `User_123!` - Should fail (Invalid character)
+8. `user-123_` - Should fail (Trailing underscore)
