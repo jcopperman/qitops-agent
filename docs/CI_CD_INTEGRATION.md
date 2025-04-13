@@ -57,13 +57,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
-          
+
       - name: Install QitOps Agent
         run: |
           git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent
@@ -71,11 +71,11 @@ jobs:
           chmod +x install.sh
           ./install.sh
           echo "$HOME/.qitops/bin" >> $GITHUB_PATH
-          
+
       - name: Configure QitOps GitHub Integration
         run: |
           qitops github config --token ${{ secrets.GITHUB_TOKEN }} --owner ${{ github.repository_owner }} --repo ${{ github.event.repository.name }}
-        
+
       - name: Analyze PR
         run: |
           qitops run pr-analyze --pr ${{ github.event.pull_request.number }}
@@ -123,12 +123,12 @@ pipeline {
             image 'rust:1.77'
         }
     }
-    
+
     environment {
         GITHUB_TOKEN = credentials('github-token')
         OPENAI_API_KEY = credentials('openai-api-key')
     }
-    
+
     stages {
         stage('Setup') {
             steps {
@@ -141,7 +141,7 @@ pipeline {
                 '''
             }
         }
-        
+
         stage('PR Analysis') {
             when {
                 expression { env.CHANGE_ID != null }
@@ -231,15 +231,166 @@ QitOps Agent can be configured using a JSON configuration file:
     "output_format": "markdown",
     "save_output": true,
     "output_dir": "./qitops-reports",
-    "comment_on_pr": true
+    "comment_on_pr": true,
+    "fail_on_high_risk": true,
+    "risk_threshold": "medium"
   },
   "github": {
-    "token_env_var": "GITHUB_TOKEN"
+    "token_env_var": "GITHUB_TOKEN",
+    "default_owner_env_var": "REPO_OWNER",
+    "default_repo_env_var": "REPO_NAME"
   },
   "llm": {
-    "default_provider": "openai"
+    "default_provider": "openai",
+    "providers": {
+      "openai": {
+        "api_key_env_var": "OPENAI_API_KEY",
+        "default_model": "gpt-4"
+      },
+      "ollama": {
+        "api_base_env_var": "OLLAMA_API_BASE",
+        "default_model": "mistral"
+      }
+    }
+  },
+  "commands": {
+    "pr_analyze": {
+      "focus_areas": ["security", "performance", "maintainability"],
+      "max_files": 50,
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["security-analyst"]
+    },
+    "risk": {
+      "components": ["auth", "payment", "user-data"],
+      "focus_areas": ["security", "performance"],
+      "max_diff_size": 10000,
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["security-analyst"]
+    },
+    "test_gen": {
+      "format": "markdown",
+      "coverage": "high",
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["qa-engineer"]
+    }
+  },
+  "sources": {
+    "paths": {
+      "requirements": "./docs/requirements.md",
+      "standards": "./docs/standards.md",
+      "data-models": "./docs/data-models.json"
+    }
+  },
+  "personas": {
+    "default": "qa-engineer"
   }
 }
+```
+
+## Sources and Personas in CI/CD
+
+QitOps Agent supports sources and personas to provide context-aware analysis. Here's how to use them in CI/CD pipelines:
+
+### Managing Sources
+
+Sources provide project-specific context for QitOps Agent. In CI/CD environments, you can:
+
+1. **Pre-configure sources** in your repository:
+
+```bash
+# Add sources during CI/CD setup
+qitops source add --id requirements --type requirements --path ./docs/requirements.md
+qitops source add --id standards --type standard --path ./docs/standards.md
+```
+
+2. **Reference sources in commands**:
+
+```bash
+qitops run pr-analyze --pr $PR_NUMBER --sources requirements,standards
+```
+
+3. **Configure default sources** in `qitops-ci-config.json`:
+
+```json
+{
+  "commands": {
+    "pr_analyze": {
+      "default_sources": ["requirements", "standards"]
+    }
+  },
+  "sources": {
+    "paths": {
+      "requirements": "./docs/requirements.md",
+      "standards": "./docs/standards.md"
+    }
+  }
+}
+```
+
+### Managing Personas
+
+Personas provide different perspectives for analysis. In CI/CD environments, you can:
+
+1. **Use built-in personas**:
+
+```bash
+qitops run risk --diff $PR_NUMBER --personas security-analyst,performance-engineer
+```
+
+2. **Configure default personas** in `qitops-ci-config.json`:
+
+```json
+{
+  "commands": {
+    "risk": {
+      "default_personas": ["security-analyst"]
+    }
+  },
+  "personas": {
+    "default": "qa-engineer"
+  }
+}
+```
+
+3. **Create custom personas** during CI/CD setup:
+
+```bash
+qitops persona add --id compliance-officer --name "Compliance Officer" --focus "compliance,regulations,standards" --description "Focuses on regulatory compliance and standards adherence."
+```
+
+### Example GitHub Actions Workflow with Sources and Personas
+
+```yaml
+name: QitOps PR Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  analyze-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install QitOps Agent
+        run: |
+          git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent
+          cd /tmp/qitops-agent
+          chmod +x install.sh
+          ./install.sh
+          echo "$HOME/.qitops/bin" >> $GITHUB_PATH
+
+      - name: Configure QitOps
+        run: |
+          qitops github config --token ${{ secrets.GITHUB_TOKEN }}
+          qitops source add --id requirements --type requirements --path ./docs/requirements.md
+          qitops source add --id standards --type standard --path ./docs/standards.md
+
+      - name: Analyze PR
+        run: |
+          qitops run pr-analyze --pr ${{ github.event.pull_request.number }} --sources requirements,standards --personas security-analyst
 ```
 
 ## Best Practices
@@ -250,6 +401,8 @@ QitOps Agent can be configured using a JSON configuration file:
 4. **Handle Output**: Save and publish QitOps Agent output as artifacts.
 5. **Set Timeouts**: Set appropriate timeouts for LLM operations.
 6. **Use Conditional Execution**: Skip analysis for certain file types or branches.
+7. **Manage Sources**: Keep source files up-to-date with project requirements and standards.
+8. **Choose Appropriate Personas**: Use different personas for different types of analysis.
 
 ## Troubleshooting
 

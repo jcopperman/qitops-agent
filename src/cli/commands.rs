@@ -2,6 +2,8 @@ use clap::{Parser, Subcommand};
 
 use crate::cli::llm::LlmArgs;
 use crate::cli::github::GitHubArgs;
+use crate::cli::source::SourceArgs;
+use crate::cli::persona::PersonaArgs;
 
 /// QitOps Agent CLI
 #[derive(Debug, Parser)]
@@ -26,7 +28,7 @@ pub enum Command {
         #[clap(subcommand)]
         command: RunCommand,
     },
-    
+
     /// LLM configuration and management
     #[clap(name = "llm")]
     Llm(LlmArgs),
@@ -34,7 +36,15 @@ pub enum Command {
     /// GitHub integration
     #[clap(name = "github")]
     GitHub(GitHubArgs),
-    
+
+    /// Source management
+    #[clap(name = "source")]
+    Source(SourceArgs),
+
+    /// Persona management
+    #[clap(name = "persona")]
+    Persona(PersonaArgs),
+
     /// Show version information
     #[clap(name = "version")]
     Version,
@@ -53,6 +63,14 @@ pub enum RunCommand {
         /// Output format (markdown, yaml, robot)
         #[clap(short, long, default_value = "markdown")]
         format: String,
+
+        /// Sources to use (comma-separated)
+        #[clap(long)]
+        sources: Option<String>,
+
+        /// Personas to use (comma-separated)
+        #[clap(long)]
+        personas: Option<String>,
     },
 
     /// Analyze a pull request
@@ -61,6 +79,14 @@ pub enum RunCommand {
         /// PR number or URL
         #[clap(short, long)]
         pr: String,
+
+        /// Sources to use (comma-separated)
+        #[clap(long)]
+        sources: Option<String>,
+
+        /// Personas to use (comma-separated)
+        #[clap(long)]
+        personas: Option<String>,
     },
 
     /// Estimate risk of changes
@@ -77,6 +103,14 @@ pub enum RunCommand {
         /// Focus areas (comma-separated: security, performance, etc.)
         #[clap(short, long)]
         focus: Option<String>,
+
+        /// Sources to use (comma-separated)
+        #[clap(long)]
+        sources: Option<String>,
+
+        /// Personas to use (comma-separated)
+        #[clap(long)]
+        personas: Option<String>,
     },
 
     /// Generate test data
@@ -89,6 +123,14 @@ pub enum RunCommand {
         /// Number of records to generate
         #[clap(short, long, default_value = "10")]
         count: usize,
+
+        /// Sources to use (comma-separated)
+        #[clap(long)]
+        sources: Option<String>,
+
+        /// Personas to use (comma-separated)
+        #[clap(long)]
+        personas: Option<String>,
     },
 
     /// Start an interactive testing session
@@ -97,5 +139,13 @@ pub enum RunCommand {
         /// Session name
         #[clap(short, long)]
         name: String,
+
+        /// Sources to use (comma-separated)
+        #[clap(long)]
+        sources: Option<String>,
+
+        /// Personas to use (comma-separated)
+        #[clap(long)]
+        personas: Option<String>,
     },
 }

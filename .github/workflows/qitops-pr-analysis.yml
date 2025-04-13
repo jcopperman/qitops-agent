@@ -10,13 +10,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
-          
+
       - name: Install QitOps Agent
         run: |
           git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent
@@ -24,19 +24,33 @@ jobs:
           chmod +x install.sh
           ./install.sh
           echo "$HOME/.qitops/bin" >> $GITHUB_PATH
-          
+
       - name: Configure QitOps GitHub Integration
         run: |
           qitops github config --token ${{ secrets.GITHUB_TOKEN }} --owner ${{ github.repository_owner }} --repo ${{ github.event.repository.name }}
-        
+
+      - name: Configure Sources and Personas
+        run: |
+          # Add sources if they exist in the repository
+          if [ -f "docs/requirements.md" ]; then
+            qitops source add --id requirements --type requirements --path docs/requirements.md
+          fi
+
+          if [ -f "docs/standards.md" ]; then
+            qitops source add --id standards --type standard --path docs/standards.md
+          fi
+
+          # Use default personas (these are built-in)
+          echo "Using built-in personas: security-analyst, qa-engineer"
+
       - name: Analyze PR
         run: |
-          qitops run pr-analyze --pr ${{ github.event.pull_request.number }}
-          
+          qitops run pr-analyze --pr ${{ github.event.pull_request.number }} --sources requirements,standards --personas security-analyst
+
       - name: Risk Assessment
         run: |
-          qitops run risk --diff ${{ github.event.pull_request.number }} --focus security,performance
-          
+          qitops run risk --diff ${{ github.event.pull_request.number }} --focus security,performance --sources requirements,standards --personas security-analyst,performance-engineer
+
       - name: Post Analysis as Comment
         if: success()
         uses: actions/github-script@v6

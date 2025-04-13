@@ -28,16 +28,38 @@
   "commands": {
     "pr_analyze": {
       "focus_areas": ["security", "performance", "maintainability"],
-      "max_files": 50
+      "max_files": 50,
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["security-analyst"]
     },
     "risk": {
       "components": ["auth", "payment", "user-data"],
       "focus_areas": ["security", "performance"],
-      "max_diff_size": 10000
+      "max_diff_size": 10000,
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["security-analyst"]
     },
     "test_gen": {
       "format": "markdown",
-      "coverage": "high"
+      "coverage": "high",
+      "default_sources": ["requirements", "standards"],
+      "default_personas": ["qa-engineer"]
+    },
+    "test_data": {
+      "format": "json",
+      "count": 10,
+      "default_sources": ["data-models"],
+      "default_personas": ["qa-engineer"]
     }
+  },
+  "sources": {
+    "paths": {
+      "requirements": "./docs/requirements.md",
+      "standards": "./docs/standards.md",
+      "data-models": "./docs/data-models.json"
+    }
+  },
+  "personas": {
+    "default": "qa-engineer"
   }
 }

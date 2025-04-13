@@ -3,12 +3,16 @@ mod cli;
 mod llm;
 mod plugin;
 mod ci;
+mod source;
+mod persona;
 
 use anyhow::Result;
 use clap::Parser;
 use cli::commands::{Cli, Command, RunCommand};
 use cli::llm::handle_llm_command;
 use cli::github::handle_github_command;
+use cli::source::handle_source_command;
+use cli::persona::handle_persona_command;
 use cli::branding;
 use cli::progress::ProgressIndicator;
 use tracing::{info, error};
@@ -49,6 +53,14 @@ async fn main() -> Result<()> {
             branding::print_command_header("GitHub Integration");
             handle_github_command(&github_args).await?
         }
+        Command::Source(source_args) => {
+            branding::print_command_header("Source Management");
+            handle_source_command(&source_args).await?
+        }
+        Command::Persona(persona_args) => {
+            branding::print_command_header("Persona Management");
+            handle_persona_command(&persona_args).await?
+        }
         Command::Version => {
             println!("QitOps Agent v{}", env!("CARGO_PKG_VERSION"));
             println!("Developed by {}", env!("CARGO_PKG_AUTHORS"));
@@ -60,9 +72,17 @@ async fn main() -> Result<()> {
 
 async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
     match command {
-        RunCommand::TestGen { path, format } => {
+        RunCommand::TestGen { path, format, sources, personas } => {
             branding::print_command_header("Generating Test Cases");
             info!("Generating test cases for {} in {} format", path, format);
+
+            if let Some(sources) = &sources {
+                info!("Using sources: {}", sources);
+            }
+
+            if let Some(personas) = &personas {
+                info!("Using personas: {}", personas);
+            }
 
             // Initialize LLM router
             let progress = ProgressIndicator::new("Initializing LLM router...");
@@ -70,9 +90,22 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
             let router = LlmRouter::new(config_manager.get_config().clone()).await?;
             progress.finish();
 
+            // Parse sources and personas
+            let sources_vec = if let Some(sources) = sources {
+                Some(sources.split(',').map(|s| s.trim().to_string()).collect())
+            } else {
+                None
+            };
+
+            let personas_vec = if let Some(personas) = personas {
+                Some(personas.split(',').map(|s| s.trim().to_string()).collect())
+            } else {
+                None
+            };
+
             // Create and execute the test generation agent
             let progress = ProgressIndicator::new("Generating test cases...");
-            let agent = TestGenAgent::new(path, &format, router).await?;
+            let agent = TestGenAgent::new(path, &format, sources_vec, personas_vec, router).await?;
             let result = agent.execute().await?;
             progress.finish();
 
@@ -89,9 +122,17 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
                 _ => branding::print_error(&result.message),
             }
         }
-        RunCommand::PrAnalyze { pr } => {
+        RunCommand::PrAnalyze { pr, sources, personas } => {
             branding::print_command_header("Analyzing Pull Request");
             info!("Analyzing PR: {}", pr);
+
+            if let Some(sources) = &sources {
+                info!("Using sources: {}", sources);
+            }
+
+            if let Some(personas) = &personas {
+                info!("Using personas: {}", personas);
+            }
 
             // Get GitHub configuration
             let github_config_manager = ci::GitHubConfigManager::new()?;
@@ -164,9 +205,17 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
                 _ => branding::print_error(&result.message),
             }
         }
-        RunCommand::Risk { diff, components, focus } => {
+        RunCommand::Risk { diff, components, focus, sources, personas } => {
             branding::print_command_header("Estimating Risk");
             info!("Estimating risk for diff: {}", diff);
+
+            if let Some(sources) = &sources {
+                info!("Using sources: {}", sources);
+            }
+
+            if let Some(personas) = &personas {
+                info!("Using personas: {}", personas);
+            }
 
             // Parse components and focus areas
             let components = components
@@ -287,9 +336,17 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
                 _ => branding::print_error(&result.message),
             }
         }
-        RunCommand::TestData { schema, count } => {
+        RunCommand::TestData { schema, count, sources, personas } => {
             branding::print_command_header("Generating Test Data");
             info!("Generating {} test data records for schema: {}", count, schema);
+
+            if let Some(sources) = &sources {
+                info!("Using sources: {}", sources);
+            }
+
+            if let Some(personas) = &personas {
+                info!("Using personas: {}", personas);
+            }
 
             // Initialize LLM router
             let progress = ProgressIndicator::new("Initializing LLM router...");
@@ -316,9 +373,17 @@ async fn handle_run_command(command: RunCommand, verbose: bool) -> Result<()> {
                 _ => branding::print_error(&result.message),
             }
         }
-        RunCommand::Session { name } => {
+        RunCommand::Session { name, sources, personas } => {
             branding::print_command_header("Starting Interactive Testing Session");
             info!("Starting interactive testing session: {}", name);
+
+            if let Some(sources) = &sources {
+                info!("Using sources: {}", sources);
+            }
+
+            if let Some(personas) = &personas {
+                info!("Using personas: {}", personas);
+            }
             // TODO: Implement interactive testing session
             branding::print_info("This feature is coming soon!");
         }

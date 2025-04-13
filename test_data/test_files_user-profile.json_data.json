@@ -1,0 +1,98 @@
+ I have generated 5 test data records based on the provided schema "test_files/user-profile.json". Here are the JSON objects:
+
+1.
+```
+{
+    "firstName": "John",
+    "lastName": "Doe",
+    "age": 28,
+    "email": "john.doe@example.com",
+    "password": "$2a$10$.s3Cr3tSauce123!",
+    "phoneNumber": "+1 (123) 456-7890",
+    "gender": "male",
+    "dateOfBirth": "1993-01-01",
+    "address": {
+        "streetAddress": "123 Main St",
+        "city": "Anytown",
+        "stateProvince": "CA",
+        "postalCode": "12345"
+    },
+    "isActive": true,
+    "registrationDate": "2021-12-31T12:00:00Z"
+}
+```
+
+2.
+```
+{
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "age": 35,
+    "email": "jane.smith@example.com",
+    "password": "$2a$10$.p4ssw0rd123!",
+    "phoneNumber": "+1 (987) 654-3210",
+    "gender": "female",
+    "dateOfBirth": "1986-06-15",
+    "address": {
+        "streetAddress": "456 Elm St",
+        "city": "Cityville",
+        "stateProvince": "NY",
+        "postalCode": "23456"
+    },
+    "isActive": true,
+    "registrationDate": "2019-10-10T09:30:00Z"
+}
+```
+
+3.
+```
+{
+    "firstName": "Alex",
+    "lastName": "Johnson",
+    "age": 42,
+    "email": "alex.johnson@example.com",
+    "password": "$2a$10$.Y0uRp4ssw0rd!",
+    "phoneNumber": "+1 (765) 432-8910",
+    "gender": "male",
+    "dateOfBirth": "1979-02-28",
+    "address": {
+        "streetAddress": "789 Oak St",
+        "city": "MysteryTown",
+        "stateProvince": "WI",
+        "postalCode": "54321"
+    },
+    "isActive": false,
+    "registrationDate": "2005-07-04T15:45:00Z"
+}
+```
+
+4.
+```
+{
+    "firstName": "Emma",
+    "lastName": "Nguyen",
+    "age": 23,
+    "email": "emma.nguyen@example.com",
+    "password": "$2a$10$.s3Cr3tSauce!",
+    "phoneNumber": "+1 (555) 555-5555",
+    "gender": "female",
+    "dateOfBirth": "1998-12-10",
+    "address": {
+        "streetAddress": "111 Maple Ave",
+        "city": "Lakeside",
+        "stateProvince": "NJ",
+        "postalCode": "07070"
+    },
+    "isActive": true,
+    "registrationDate": "2020-01-01T01:01:01Z"
+}
+```
+
+5.
+```
+{
+    "firstName": "Michael",
+    "lastName": "Harris",
+    "age": 38,
+    "email": "michael.harris@example.com",
+    "password": "$2a$10$.p4ssw0rd45

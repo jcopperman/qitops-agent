@@ -55,18 +55,32 @@ pub struct TestGenAgent {
     /// Output format
     format: TestFormat,
 
+    /// Sources to use
+    sources: Option<Vec<String>>,
+
+    /// Personas to use
+    personas: Option<Vec<String>>,
+
     /// LLM router
     llm_router: LlmRouter,
 }
 
 impl TestGenAgent {
     /// Create a new test case generator agent
-    pub async fn new(path: String, format: &str, llm_router: LlmRouter) -> Result<Self> {
+    pub async fn new(
+        path: String,
+        format: &str,
+        sources: Option<Vec<String>>,
+        personas: Option<Vec<String>>,
+        llm_router: LlmRouter
+    ) -> Result<Self> {
         let format = TestFormat::from_str(format)?;
 
         Ok(Self {
             path,
             format,
+            sources,
+            personas,
             llm_router,
         })
     }
@@ -82,11 +96,38 @@ impl TestGenAgent {
     }
 
     /// Generate the prompt for the LLM
-    fn generate_prompt(&self, source_code: &str) -> String {
-        format!(
+    async fn generate_prompt(&self, source_code: &str) -> Result<String> {
+        let mut prompt = format!(
             "Generate comprehensive test cases for the following code. Focus on edge cases, error handling, and important functionality.\n\nCode:\n```\n{}\n```",
             source_code
-        )
+        );
+
+        // Add sources if available
+        if let Some(sources) = &self.sources {
+            if !sources.is_empty() {
+                let source_manager = crate::source::SourceManager::new()?;
+                let source_content = source_manager.get_content_for_sources(sources)?;
+
+                if !source_content.is_empty() {
+                    prompt.push_str("\n\nAdditional context from sources:\n");
+                    prompt.push_str(&source_content);
+                }
+            }
+        }
+
+        // Add personas if available
+        if let Some(personas) = &self.personas {
+            if !personas.is_empty() {
+                let persona_manager = crate::persona::PersonaManager::new()?;
+                let persona_prompt = persona_manager.get_prompt_for_personas(personas)?;
+
+                if !persona_prompt.is_empty() {
+                    prompt = format!("{}\n\n{}", persona_prompt, prompt);
+                }
+            }
+        }
+
+        Ok(prompt)
     }
 
     /// Save the generated test cases to a file
@@ -123,7 +164,7 @@ impl Agent for TestGenAgent {
         let source_code = self.read_source_code()?;
 
         // Generate the prompt
-        let prompt = self.generate_prompt(&source_code);
+        let prompt = self.generate_prompt(&source_code).await?;
 
         // Create the LLM request
         let model = self.llm_router.default_model().unwrap_or_else(|| "tinyllama".to_string());

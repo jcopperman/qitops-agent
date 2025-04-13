@@ -1,0 +1,91 @@
+ ```yaml
+test_cases:
+  email_validation:
+    - test_case_1:
+        input: "johndoe@example.com"
+        expected_output: true
+    - test_case_2:
+        input: "johndoe@"
+        expected_output: false
+    - test_case_3:
+        input: "johndoe@example"
+        expected_output: false
+    - test_case_4:
+        input: "johndoe@.example.com"
+        expected_output: false
+    - test_case_5:
+        input: "johndoe@example.co.uk"
+        expected_output: true
+    - test_case_6:
+        input: "johndoe+example@example.com"
+        expected_output: true
+    - test_case_7:
+        input: ""
+        expected_output: false
+    - test_case_8:
+        input: "johndoe@example..com"
+        expected_output: false
+    - test_case_9:
+        input: "johndoe@-example.com"
+        expected_output: false
+
+  password_validation:
+    - test_case_1:
+        input: "Password1234"
+        expected_output: true
+    - test_case_2:
+        input: "password"
+        expected_output: false
+    - test_case_3:
+        input: "12345678"
+        expected_output: false
+    - test_case_4:
+        input: "!@#$%^&*()_+-=[]{}|;:'\",.<>? Password"
+        expected_output: true
+    - test_case_5:
+        input: "Passw0rd"
+        expected_output: false
+    - test_case_6:
+        input: "password123456789"
+        expected_output: true
+    - test_case_7:
+        input: ""
+        expected_output: false
+    - test_case_8:
+        input: "Password123!"
+        expected_output: false
+    - test_case_9:
+        input: "Password1234567890ABC"
+        expected_output: true
+
+  username_validation:
+    - test_case_1:
+        input: "johndoe"
+        expected_output: true
+    - test_case_2:
+        input: "_johndoe"
+        expected_output: false
+    - test_case_3:
+        input: "john.doe"
+        expected_output: false
+    - test_case_4:
+        input: "johndoe123"
+        expected_output: true
+    - test_case_5:
+        input: "johndoe_123"
+        expected_output: true
+    - test_case_6:
+        input: ""
+        expected_output: false
+    - test_case_7:
+        input: "johndoe-example"
+        expected_output: false
+    - test_case_8:
+        input: "johndoe.example"
+        expected_output: false
+    - test_case_9:
+        input: "johndoe0123456789"
+        expected_output: true
+```
+
+This YAML file contains comprehensive test cases for the three JavaScript functions provided. The test cases cover edge cases, error handling, and important functionality such as checking if a valid email adress, password, or username is provided.

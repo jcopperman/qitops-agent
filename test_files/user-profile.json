@@ -1,0 +1,15 @@
+{
+  "name": "User Profile",
+  "fields": [
+    {"name": "id", "type": "uuid"},
+    {"name": "username", "type": "string", "min_length": 3, "max_length": 20},
+    {"name": "email", "type": "email"},
+    {"name": "age", "type": "integer", "min": 18, "max": 100},
+    {"name": "country", "type": "string", "enum": ["US", "UK", "CA", "AU"]},
+    {"name": "is_active", "type": "boolean"},
+    {"name": "registration_date", "type": "date"},
+    {"name": "last_login", "type": "datetime"},
+    {"name": "profile_views", "type": "integer", "min": 0},
+    {"name": "bio", "type": "string", "max_length": 500, "optional": true}
+  ]
+}
