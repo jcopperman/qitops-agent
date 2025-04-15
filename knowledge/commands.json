@@ -143,7 +143,7 @@
   },
   "bot": {
     "name": "bot",
-    "description": "Interactive assistant for QitOps Agent",
+    "description": "Interactive assistant for QitOps Agent that provides help, executes commands, and maintains conversation history",
     "usage": "qitops bot <subcommand> [options]",
     "examples": [
       "qitops bot chat",
@@ -151,8 +151,25 @@
     ],
     "options": {
       "chat": "Start a chat session with QitOps Bot",
-      "--system-prompt": "System prompt file",
-      "--knowledge-base": "Knowledge base path"
-    }
+      "--system-prompt": "System prompt file to customize the bot's behavior",
+      "--knowledge-base": "Knowledge base path containing commands, FAQs, and examples"
+    },
+    "chat_commands": {
+      "!help": "Show available commands",
+      "!history": "Show chat history",
+      "!clear": "Clear chat history",
+      "!save": "Save chat history to a file",
+      "!load <session_name>": "Load a saved chat session",
+      "!sessions": "List available chat sessions",
+      "!exec <command>": "Execute a QitOps Agent command",
+      "exit or quit": "End the chat session"
+    },
+    "features": [
+      "Natural language command parsing",
+      "Conversation memory with session management",
+      "Knowledge base integration for contextual responses",
+      "Command execution from chat",
+      "Customizable system prompt"
+    ]
   }
 }

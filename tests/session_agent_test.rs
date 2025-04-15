@@ -1,23 +1,27 @@
 use anyhow::Result;
-use qitops_agent::agent::{SessionAgent, AgentStatus};
+use qitops_agent::agent::SessionAgent;
 use qitops_agent::agent::traits::Agent;
-use qitops_agent::llm::{LlmRouter, ConfigManager, LlmConfig, LlmProvider};
-use std::collections::HashMap;
+use qitops_agent::llm::client::RouterConfig;
+use qitops_agent::llm::client::LlmRouter;
+use qitops_agent::llm::client::ProviderConfig;
 
 #[tokio::test]
 async fn test_session_agent_creation() -> Result<()> {
     // Create a mock LLM router
-    let mut config = LlmConfig::default();
-    config.providers.insert(
-        "mock".to_string(),
-        LlmProvider {
-            provider_type: "mock".to_string(),
-            api_key: None,
-            api_base: None,
-            model: Some("mock-model".to_string()),
-            is_default: true,
-        },
-    );
+    let config = RouterConfig {
+        providers: vec![
+            ProviderConfig {
+                provider_type: "ollama".to_string(),
+                api_key: None,
+                api_base: Some("http://localhost:11434".to_string()),
+                default_model: "mistral".to_string(),
+                options: std::collections::HashMap::new(),
+            },
+        ],
+        default_provider: "ollama".to_string(),
+        task_providers: std::collections::HashMap::new(),
+        cache: Default::default(),
+    };
     let router = LlmRouter::new(config).await?;
 
     // Create a session agent
@@ -41,17 +45,20 @@ async fn test_session_agent_creation() -> Result<()> {
 #[tokio::test]
 async fn test_session_agent_with_empty_name() -> Result<()> {
     // Create a mock LLM router
-    let mut config = LlmConfig::default();
-    config.providers.insert(
-        "mock".to_string(),
-        LlmProvider {
-            provider_type: "mock".to_string(),
-            api_key: None,
-            api_base: None,
-            model: Some("mock-model".to_string()),
-            is_default: true,
-        },
-    );
+    let config = RouterConfig {
+        providers: vec![
+            ProviderConfig {
+                provider_type: "ollama".to_string(),
+                api_key: None,
+                api_base: Some("http://localhost:11434".to_string()),
+                default_model: "mistral".to_string(),
+                options: std::collections::HashMap::new(),
+            },
+        ],
+        default_provider: "ollama".to_string(),
+        task_providers: std::collections::HashMap::new(),
+        cache: Default::default(),
+    };
     let router = LlmRouter::new(config).await?;
 
     // Try to create a session agent with an empty name
@@ -75,17 +82,20 @@ async fn test_session_agent_with_empty_name() -> Result<()> {
 #[tokio::test]
 async fn test_session_agent_with_empty_application() -> Result<()> {
     // Create a mock LLM router
-    let mut config = LlmConfig::default();
-    config.providers.insert(
-        "mock".to_string(),
-        LlmProvider {
-            provider_type: "mock".to_string(),
-            api_key: None,
-            api_base: None,
-            model: Some("mock-model".to_string()),
-            is_default: true,
-        },
-    );
+    let config = RouterConfig {
+        providers: vec![
+            ProviderConfig {
+                provider_type: "ollama".to_string(),
+                api_key: None,
+                api_base: Some("http://localhost:11434".to_string()),
+                default_model: "mistral".to_string(),
+                options: std::collections::HashMap::new(),
+            },
+        ],
+        default_provider: "ollama".to_string(),
+        task_providers: std::collections::HashMap::new(),
+        cache: Default::default(),
+    };
     let router = LlmRouter::new(config).await?;
 
     // Try to create a session agent with an empty application
@@ -109,17 +119,20 @@ async fn test_session_agent_with_empty_application() -> Result<()> {
 #[tokio::test]
 async fn test_session_agent_with_invalid_session_type() -> Result<()> {
     // Create a mock LLM router
-    let mut config = LlmConfig::default();
-    config.providers.insert(
-        "mock".to_string(),
-        LlmProvider {
-            provider_type: "mock".to_string(),
-            api_key: None,
-            api_base: None,
-            model: Some("mock-model".to_string()),
-            is_default: true,
-        },
-    );
+    let config = RouterConfig {
+        providers: vec![
+            ProviderConfig {
+                provider_type: "ollama".to_string(),
+                api_key: None,
+                api_base: Some("http://localhost:11434".to_string()),
+                default_model: "mistral".to_string(),
+                options: std::collections::HashMap::new(),
+            },
+        ],
+        default_provider: "ollama".to_string(),
+        task_providers: std::collections::HashMap::new(),
+        cache: Default::default(),
+    };
     let router = LlmRouter::new(config).await?;
 
     // Try to create a session agent with an invalid session type
@@ -143,17 +156,20 @@ async fn test_session_agent_with_invalid_session_type() -> Result<()> {
 #[tokio::test]
 async fn test_session_agent_init() -> Result<()> {
     // Create a mock LLM router
-    let mut config = LlmConfig::default();
-    config.providers.insert(
-        "mock".to_string(),
-        LlmProvider {
-            provider_type: "mock".to_string(),
-            api_key: None,
-            api_base: None,
-            model: Some("mock-model".to_string()),
-            is_default: true,
-        },
-    );
+    let config = RouterConfig {
+        providers: vec![
+            ProviderConfig {
+                provider_type: "ollama".to_string(),
+                api_key: None,
+                api_base: Some("http://localhost:11434".to_string()),
+                default_model: "mistral".to_string(),
+                options: std::collections::HashMap::new(),
+            },
+        ],
+        default_provider: "ollama".to_string(),
+        task_providers: std::collections::HashMap::new(),
+        cache: Default::default(),
+    };
     let router = LlmRouter::new(config).await?;
 
     // Create a session agent

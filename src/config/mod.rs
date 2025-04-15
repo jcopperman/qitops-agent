@@ -32,6 +32,7 @@ impl Default for CommandConfig {
 
 /// Sources configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct SourcesConfig {
     /// Default sources
     #[serde(default)]
@@ -42,30 +43,16 @@ pub struct SourcesConfig {
     pub paths: HashMap<String, String>,
 }
 
-impl Default for SourcesConfig {
-    fn default() -> Self {
-        Self {
-            default: None,
-            paths: HashMap::new(),
-        }
-    }
-}
 
 /// Personas configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct PersonasConfig {
     /// Default persona
     #[serde(default)]
     pub default: Option<String>,
 }
 
-impl Default for PersonasConfig {
-    fn default() -> Self {
-        Self {
-            default: None,
-        }
-    }
-}
 
 /// QitOps configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

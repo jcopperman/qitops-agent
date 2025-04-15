@@ -1,4 +1,6 @@
 use qitops_agent::cli::commands::{Cli, Command, RunCommand};
+use qitops_agent::cli::llm::LlmCommand;
+use qitops_agent::cli::github::GitHubCommand;
 use clap::Parser;
 
 #[cfg(test)]
@@ -7,20 +9,20 @@ mod tests {
 
     #[test]
     fn test_cli_parsing_help() {
-        let cli = Cli::try_parse_from(&["qitops", "--help"]);
+        let cli = Cli::try_parse_from(["qitops", "--help"]);
         assert!(cli.is_err()); // Help causes error in try_parse
     }
 
     #[test]
     fn test_cli_parsing_version() {
-        let cli = Cli::try_parse_from(&["qitops", "--version"]);
+        let cli = Cli::try_parse_from(["qitops", "--version"]);
         assert!(cli.is_err()); // Version causes error in try_parse
     }
 
     #[test]
     fn test_cli_parsing_run_test_gen() {
-        let cli = Cli::try_parse_from(&["qitops", "run", "test-gen", "--path", "src/test.rs"]).unwrap();
-        
+        let cli = Cli::try_parse_from(["qitops", "run", "test-gen", "--path", "src/test.rs"]).unwrap();
+
         match cli.command {
             Command::Run { command } => {
                 match command {
@@ -37,14 +39,15 @@ mod tests {
 
     #[test]
     fn test_cli_parsing_run_pr_analyze() {
-        let cli = Cli::try_parse_from(&["qitops", "run", "pr-analyze", "--pr", "123"]).unwrap();
-        
+        let cli = Cli::try_parse_from(["qitops", "run", "pr-analyze", "--pr", "123"]).unwrap();
+
         match cli.command {
             Command::Run { command } => {
                 match command {
-                    RunCommand::PrAnalyze { pr, focus, .. } => {
+                    RunCommand::PrAnalyze { pr, sources, personas, .. } => {
                         assert_eq!(pr, "123");
-                        assert_eq!(focus, "general"); // Default value
+                        assert!(sources.is_none()); // Default value
+                        assert!(personas.is_none()); // Default value
                     },
                     _ => panic!("Expected PrAnalyze command"),
                 }
@@ -55,15 +58,17 @@ mod tests {
 
     #[test]
     fn test_cli_parsing_run_risk() {
-        let cli = Cli::try_parse_from(&["qitops", "run", "risk", "--diff", "changes.diff"]).unwrap();
-        
+        let cli = Cli::try_parse_from(["qitops", "run", "risk", "--diff", "changes.diff"]).unwrap();
+
         match cli.command {
             Command::Run { command } => {
                 match command {
-                    RunCommand::Risk { diff, components, focus_areas, .. } => {
+                    RunCommand::Risk { diff, components, focus, sources, personas, .. } => {
                         assert_eq!(diff, "changes.diff");
-                        assert!(components.is_empty()); // Default value
-                        assert!(focus_areas.is_empty()); // Default value
+                        assert!(components.is_none()); // Default value
+                        assert!(focus.is_none()); // Default value
+                        assert!(sources.is_none()); // Default value
+                        assert!(personas.is_none()); // Default value
                     },
                     _ => panic!("Expected Risk command"),
                 }
@@ -74,8 +79,8 @@ mod tests {
 
     #[test]
     fn test_cli_parsing_run_test_data() {
-        let cli = Cli::try_parse_from(&["qitops", "run", "test-data", "--schema", "user", "--count", "10"]).unwrap();
-        
+        let cli = Cli::try_parse_from(["qitops", "run", "test-data", "--schema", "user", "--count", "10"]).unwrap();
+
         match cli.command {
             Command::Run { command } => {
                 match command {
@@ -92,11 +97,15 @@ mod tests {
 
     #[test]
     fn test_cli_parsing_llm_list() {
-        let cli = Cli::try_parse_from(&["qitops", "llm", "list"]).unwrap();
-        
+        let cli = Cli::try_parse_from(["qitops", "llm", "list"]).unwrap();
+
         match cli.command {
             Command::Llm(llm_args) => {
-                assert_eq!(llm_args.command, "list");
+                if let LlmCommand::List = llm_args.command {
+                    // Test passed
+                } else {
+                    panic!("Expected LlmCommand::List");
+                }
             },
             _ => panic!("Expected Llm command"),
         }
@@ -104,11 +113,15 @@ mod tests {
 
     #[test]
     fn test_cli_parsing_github_test() {
-        let cli = Cli::try_parse_from(&["qitops", "github", "test"]).unwrap();
-        
+        let cli = Cli::try_parse_from(["qitops", "github", "test"]).unwrap();
+
         match cli.command {
             Command::GitHub(github_args) => {
-                assert_eq!(github_args.command, "test");
+                if let GitHubCommand::Test { .. } = github_args.command {
+                    // Test passed
+                } else {
+                    panic!("Expected GitHubCommand::Test");
+                }
             },
             _ => panic!("Expected GitHub command"),
         }

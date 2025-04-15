@@ -11,8 +11,10 @@ pub enum SourceType {
     Custom(String),
 }
 
-impl SourceType {
-    pub fn from_str(s: &str) -> Result<Self> {
+impl std::str::FromStr for SourceType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "requirements" => Ok(SourceType::Requirements),
             "standard" => Ok(SourceType::Standard),
@@ -20,13 +22,15 @@ impl SourceType {
             _ => Ok(SourceType::Custom(s.to_string())),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for SourceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SourceType::Requirements => "requirements".to_string(),
-            SourceType::Standard => "standard".to_string(),
-            SourceType::Documentation => "documentation".to_string(),
-            SourceType::Custom(s) => s.clone(),
+            SourceType::Requirements => write!(f, "requirements"),
+            SourceType::Standard => write!(f, "standard"),
+            SourceType::Documentation => write!(f, "documentation"),
+            SourceType::Custom(s) => write!(f, "{}", s),
         }
     }
 }
@@ -88,7 +92,7 @@ impl SourceManager {
 
         for source_id in sources {
             if let Some(source) = self.get_source(source_id) {
-                content.push_str(&format!("# Source: {} ({})\n\n", source_id, source.source_type.to_string()));
+                content.push_str(&format!("# Source: {} ({})\n\n", source_id, source.source_type));
                 content.push_str(&source.get_content()?);
                 content.push_str("\n\n");
             }
@@ -173,7 +177,7 @@ pub async fn handle_source_command(args: &SourceArgs) -> Result<()> {
 async fn add_source(id: &str, type_: &str, path: &str, description: Option<String>) -> Result<()> {
     let mut source_manager = SourceManager::new()?;
 
-    let source_type = SourceType::from_str(type_)?;
+    let source_type = type_.parse::<SourceType>()?;
     let source_path = PathBuf::from(path);
 
     let source = Source::new(
@@ -204,7 +208,7 @@ async fn list_sources() -> Result<()> {
     println!("Sources:");
     for source in sources {
         println!("  ID: {}", source.id);
-        println!("    Type: {}", source.source_type.to_string());
+        println!("    Type: {}", source.source_type);
         println!("    Path: {}", source.path.display());
         if let Some(description) = &source.description {
             println!("    Description: {}", description);
@@ -235,7 +239,7 @@ async fn show_source(id: &str) -> Result<()> {
 
     let content = source.get_content()?;
 
-    println!("Source: {} ({})", source.id, source.source_type.to_string());
+    println!("Source: {} ({})", source.id, source.source_type);
     if let Some(description) = &source.description {
         println!("Description: {}", description);
     }

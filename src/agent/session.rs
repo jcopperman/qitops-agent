@@ -21,9 +21,10 @@ pub enum SessionType {
     Security,
 }
 
-impl SessionType {
-    /// Parse a string into a session type
-    pub fn from_str(s: &str) -> Result<Self> {
+impl std::str::FromStr for SessionType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "exploratory" => Ok(SessionType::Exploratory),
             "regression" => Ok(SessionType::Regression),
@@ -33,6 +34,9 @@ impl SessionType {
             _ => Err(anyhow::anyhow!("Unknown session type: {}", s)),
         }
     }
+}
+
+impl SessionType {
 
     /// Get the system prompt for this session type
     pub fn system_prompt(&self) -> String {
@@ -47,6 +51,7 @@ impl SessionType {
 }
 
 /// Interactive testing session agent
+#[derive(Debug)]
 pub struct SessionAgent {
     /// Session name
     name: String,
@@ -101,12 +106,12 @@ impl SessionAgent {
         }
 
         if application.is_empty() {
-            return Err(anyhow::anyhow!("Application name cannot be empty"));
+            return Err(anyhow::anyhow!("application name cannot be empty"));
         }
 
         // Parse session type
         let session_type = match session_type {
-            Some(t) => SessionType::from_str(&t)?,
+            Some(t) => t.parse::<SessionType>()?,
             None => SessionType::Exploratory,
         };
 
@@ -235,7 +240,7 @@ impl SessionAgent {
             for objective in &self.objectives {
                 markdown.push_str(&format!("- {}\n", objective));
             }
-            markdown.push_str("\n");
+            markdown.push('\n');
         }
 
         markdown.push_str("## Session History\n\n");

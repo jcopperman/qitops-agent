@@ -91,7 +91,7 @@ impl Agent for TestDataAgent {
     async fn execute(&self) -> Result<AgentResponse> {
         // Validate format
         let format = self.format.to_lowercase();
-        if !vec!["json", "csv", "yaml", "yml"].contains(&format.as_str()) {
+        if !["json", "csv", "yaml", "yml"].contains(&format.as_str()) {
             return Ok(AgentResponse {
                 status: AgentStatus::Error,
                 message: format!("Unsupported output format: {}. Supported formats are: json, csv, yaml", self.format),

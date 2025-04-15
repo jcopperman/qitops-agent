@@ -10,7 +10,6 @@ pub mod session;
 // Re-export commonly used types
 pub use traits::{Agent, AgentResponse, AgentStatus};
 pub use test_gen::TestGenAgent;
-pub use test_gen_enhanced::TestGenAgent as EnhancedTestGenAgent;
 pub use pr_analyze::PrAnalyzeAgent;
 pub use risk::RiskAgent;
 pub use test_data::TestDataAgent;

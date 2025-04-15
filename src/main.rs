@@ -23,7 +23,6 @@ use cli::branding;
 use cli::progress::ProgressIndicator;
 use tracing::info;
 use colored::Colorize;
-use tracing_subscriber;
 use std::io::Write;
 
 use agent::{TestGenAgent, PrAnalyzeAgent, RiskAgent, TestDataAgent, SessionAgent, AgentStatus};
@@ -119,7 +118,7 @@ async fn main() -> Result<()> {
     }
 
     // Execute the requested command
-    let _command_result = match cli.command {
+    match cli.command {
         Command::Run { command } => {
             handle_run_command(command, cli.verbose).await?
         }
@@ -154,10 +153,8 @@ async fn main() -> Result<()> {
     };
 
     // Check if an update is available
-    if let Ok(update_result) = update_check.await {
-        if let Ok(Some(update_info)) = update_result {
-            update::print_update_info(&update_info);
-        }
+    if let Ok(Ok(Some(update_info))) = update_check.await {
+        update::print_update_info(&update_info);
     }
 
     Ok(())
@@ -242,7 +239,7 @@ async fn handle_run_command_inner(command: RunCommand, _verbose: bool) -> Result
     };
 
     // Execute the command
-    let _result = match command {
+    match command {
         RunCommand::TestGen { path, format, sources, personas } => {
             branding::print_command_header("Generating Test Cases");
             info!("Generating test cases for {} in {} format", path, format);
@@ -295,7 +292,7 @@ async fn handle_run_command_inner(command: RunCommand, _verbose: bool) -> Result
 
             // Create and execute the test generation agent
             let progress = ProgressIndicator::new("Generating test cases...");
-            let agent = TestGenAgent::new(path, &format, sources_vec, personas_vec, router).await?;
+            let agent = TestGenAgent::new(path, format.clone(), sources_vec, personas_vec, router).await?;
             let result = agent.execute().await?;
             progress.finish();
 

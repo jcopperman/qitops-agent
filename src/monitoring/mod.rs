@@ -4,16 +4,11 @@
 // It uses Prometheus for metrics collection and exposes an HTTP endpoint for scraping.
 
 use anyhow::Result;
-use lazy_static::lazy_static;
-use prometheus::{
-    register_counter, register_gauge, register_histogram, register_int_counter,
-    register_int_gauge, Counter, Gauge, Histogram, IntCounter, IntGauge,
-};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 // Re-export metrics
 pub mod metrics;
@@ -34,6 +29,7 @@ pub struct MonitoringService {
     /// Server handle
     server_handle: Option<JoinHandle<()>>,
     /// Start time of the service
+    #[allow(dead_code)]
     start_time: Instant,
 }
 
@@ -93,6 +89,7 @@ impl MonitoringService {
     }
 
     /// Get the uptime of the service
+    #[allow(dead_code)]
     pub fn uptime(&self) -> Duration {
         self.start_time.elapsed()
     }
@@ -107,7 +104,7 @@ fn initialize_system_metrics() {
 /// Collect system metrics
 fn collect_system_metrics() {
     // Update system metrics using sysinfo
-    use sysinfo::{System, Process, Pid};
+    use sysinfo::{System, Pid};
 
     // Create a new System instance
     let mut system = System::new_all();
@@ -262,6 +259,7 @@ pub fn track_cache_miss() {
 }
 
 /// Track a session message
+#[allow(dead_code)]
 pub fn track_session_message(is_user: bool) {
     SESSION_MESSAGE_COUNTER.inc();
     if is_user {

@@ -1,4 +1,4 @@
-use qitops_agent::llm::{LlmRequest, LlmResponse, MessageRole};
+use qitops_agent::llm::client::{LlmRequest, LlmResponse, MessageRole};
 
 #[cfg(test)]
 mod tests {
@@ -8,7 +8,7 @@ mod tests {
     fn test_llm_request_creation() {
         // Test basic request creation
         let request = LlmRequest::new("Test content".to_string(), "test-model".to_string());
-        
+
         assert_eq!(request.model, "test-model");
         assert_eq!(request.messages.len(), 1);
         assert_eq!(request.messages[0].role, MessageRole::User);
@@ -22,7 +22,7 @@ mod tests {
         // Test request with system message
         let request = LlmRequest::new("Test content".to_string(), "test-model".to_string())
             .with_system_message("System instruction".to_string());
-        
+
         assert_eq!(request.messages.len(), 2);
         assert_eq!(request.messages[0].role, MessageRole::System);
         assert_eq!(request.messages[0].content, "System instruction");
@@ -38,11 +38,11 @@ mod tests {
             "test-model".to_string(),
             "test-provider".to_string()
         );
-        
+
         assert_eq!(response.text, "Generated text");
         assert_eq!(response.model, "test-model");
         assert_eq!(response.provider, "test-provider");
-        assert_eq!(response.cached, false);
+        assert!(!response.cached);
         assert!(response.tokens_used.is_none());
     }
 
@@ -54,7 +54,7 @@ mod tests {
             "test-model".to_string(),
             "test-provider".to_string()
         ).with_tokens(100);
-        
+
         assert_eq!(response.text, "Generated text");
         assert_eq!(response.tokens_used, Some(100));
     }
@@ -67,7 +67,7 @@ mod tests {
             "test-model".to_string(),
             "test-provider".to_string()
         ).with_latency(150);
-        
+
         assert_eq!(response.latency_ms, Some(150));
     }
 
@@ -79,7 +79,7 @@ mod tests {
             "test-model".to_string(),
             "test-provider".to_string()
         ).with_cached(true);
-        
-        assert_eq!(response.cached, true);
+
+        assert!(response.cached);
     }
 }

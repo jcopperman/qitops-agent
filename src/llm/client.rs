@@ -6,7 +6,8 @@ use std::fmt;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::Mutex;
-use tracing::debug;
+use tracing::{debug, error};
+use crate::monitoring;
 
 /// LLM client error
 #[derive(Debug, Error)]
@@ -442,7 +443,7 @@ impl Default for RouterConfig {
 
 /// LLM client trait
 #[async_trait]
-pub trait LlmClient: Send + Sync {
+pub trait LlmClient: Send + Sync + std::fmt::Debug {
     /// Send a request to the LLM
     async fn send(&self, request: LlmRequest) -> Result<LlmResponse>;
 
@@ -456,7 +457,7 @@ pub trait LlmClient: Send + Sync {
 // LLM client implementations are now in providers.rs
 
 /// LLM router that manages multiple LLM clients
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LlmRouter {
     clients: HashMap<String, Arc<dyn LlmClient>>,
     config: RouterConfig,
@@ -483,25 +484,19 @@ impl LlmRouter {
             match provider_config.provider_type.as_str() {
                 "openai" => {
                     if provider_config.api_key.is_none() && std::env::var("OPENAI_API_KEY").is_err() {
-                        initialization_errors.push(format!(
-                            "OpenAI API key not found in config or OPENAI_API_KEY environment variable"
-                        ));
+                        initialization_errors.push("OpenAI API key not found in config or OPENAI_API_KEY environment variable".to_string());
                         continue;
                     }
                 },
                 "anthropic" => {
                     if provider_config.api_key.is_none() && std::env::var("ANTHROPIC_API_KEY").is_err() {
-                        initialization_errors.push(format!(
-                            "Anthropic API key not found in config or ANTHROPIC_API_KEY environment variable"
-                        ));
+                        initialization_errors.push("Anthropic API key not found in config or ANTHROPIC_API_KEY environment variable".to_string());
                         continue;
                     }
                 },
                 "ollama" => {
                     if provider_config.api_base.is_none() {
-                        initialization_errors.push(format!(
-                            "Ollama API base URL not specified. Default is http://localhost:11434"
-                        ));
+                        initialization_errors.push("Ollama API base URL not specified. Default is http://localhost:11434".to_string());
                         continue;
                     }
                 },
@@ -515,13 +510,13 @@ impl LlmRouter {
             let client_result = match provider_config.provider_type.as_str() {
                 "openai" => crate::llm::providers::OpenAiClient::new(provider_config)
                     .map(|c| Arc::new(c) as Arc<dyn LlmClient>)
-                    .context(format!("Failed to initialize OpenAI client")),
+                    .context("Failed to initialize OpenAI client".to_string()),
                 "ollama" => crate::llm::providers::OllamaClient::new(provider_config)
                     .map(|c| Arc::new(c) as Arc<dyn LlmClient>)
-                    .context(format!("Failed to initialize Ollama client")),
+                    .context("Failed to initialize Ollama client".to_string()),
                 "anthropic" => crate::llm::providers::AnthropicClient::new(provider_config)
                     .map(|c| Arc::new(c) as Arc<dyn LlmClient>)
-                    .context(format!("Failed to initialize Anthropic client")),
+                    .context("Failed to initialize Anthropic client".to_string()),
                 _ => {
                     // This should never happen due to the validation above
                     continue;
@@ -586,6 +581,9 @@ impl LlmRouter {
 
     /// Send a request to the LLM using the appropriate client
     pub async fn send(&self, mut request: LlmRequest, task: Option<&str>) -> Result<LlmResponse> {
+        // Start a timer for monitoring
+        let timer = monitoring::Timer::new("llm_request");
+
         // Determine which provider to use based on the task
         let provider = if let Some(task) = task {
             self.config.task_providers.get(task)
@@ -595,9 +593,15 @@ impl LlmRouter {
             &self.default_client
         };
 
+        // Track the LLM request for monitoring
+        monitoring::track_llm_request(provider);
+
         // Try to get the client
         let client = self.clients.get(provider)
-            .ok_or_else(|| anyhow!("Provider not found: {}", provider))?;
+            .ok_or_else(|| {
+                monitoring::track_error("llm");
+                anyhow!("Provider not found: {}", provider)
+            })?;
 
         // Truncate content if it's too large
         // This is a simple heuristic - for Ollama/Mistral, we'll limit to 32K chars
@@ -623,7 +627,14 @@ impl LlmRouter {
             if let Some(cache) = &self.cache {
                 let mut cache_guard = cache.lock().await;
                 if let Some(cached_response) = cache_guard.get(&request, provider) {
+                    // Track cache hit
+                    monitoring::track_cache_hit();
+                    // Stop the timer and return cached response
+                    timer.stop();
                     return Ok(cached_response.with_cached(true));
+                } else {
+                    // Track cache miss
+                    monitoring::track_cache_miss();
                 }
             }
         }
@@ -631,7 +642,7 @@ impl LlmRouter {
         // Check if the client is available
         if !client.is_available().await {
             // If not, try to find an available client
-            for (_name, client) in &self.clients {
+            for client in self.clients.values() {
                 if client.is_available().await {
                     let start_time = std::time::Instant::now();
                     let response = client.send(request.clone()).await?;
@@ -644,6 +655,8 @@ impl LlmRouter {
                 }
             }
 
+            monitoring::track_error("llm");
+            timer.stop();
             return Err(anyhow!("No LLM providers are available"));
         }
 
@@ -651,13 +664,25 @@ impl LlmRouter {
         let start_time = std::time::Instant::now();
 
         // Send the request
-        let response = client.send(request.clone()).await?;
+        let response = match client.send(request.clone()).await {
+            Ok(resp) => resp,
+            Err(e) => {
+                monitoring::track_error("llm");
+                timer.stop();
+                return Err(e);
+            }
+        };
 
         // Calculate latency
         let latency = start_time.elapsed().as_millis() as u64;
 
         // Add latency to response
         let response = response.with_latency(latency);
+
+        // Track token usage if available
+        if let Some(tokens) = response.tokens_used {
+            monitoring::track_llm_token_usage(provider, tokens as u64);
+        }
 
         // Cache the response if caching is enabled
         if request.use_cache && self.cache.is_some() {
@@ -666,6 +691,9 @@ impl LlmRouter {
                 let _ = cache_guard.put(&request, provider, response.clone());
             }
         }
+
+        // Stop the timer
+        timer.stop();
 
         Ok(response)
     }

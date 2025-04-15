@@ -4,8 +4,7 @@
 
 use lazy_static::lazy_static;
 use prometheus::{
-    register_counter, register_gauge, register_histogram, register_int_counter,
-    register_int_gauge, Counter, Gauge, Histogram, IntCounter, IntGauge,
+    register_counter, register_gauge, register_histogram, Counter, Gauge, Histogram,
 };
 
 // System metrics

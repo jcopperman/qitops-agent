@@ -1,0 +1,67 @@
+{
+  "id": "test-gen-workflow",
+  "title": "Test Generation Workflow",
+  "description": "Learn how to generate comprehensive test cases for your code using QitOps Agent.",
+  "steps": [
+    {
+      "title": "Introduction to Test Generation",
+      "content": "QitOps Agent can generate comprehensive test cases for your code based on the code itself, requirements, and best practices.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Preparing Your Code",
+      "content": "Before generating test cases, make sure your code is well-documented with comments explaining the purpose and behavior of functions and classes.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Basic Test Generation",
+      "content": "Let's start with basic test generation for a file. The test-gen command requires a path to the file you want to generate tests for.",
+      "example": "qitops run test-gen --path src/main.rs",
+      "expected_action": "Try generating test cases for a file using the example command"
+    },
+    {
+      "title": "Customizing Test Format",
+      "content": "You can customize the format of the generated tests using the --format option. Supported formats include markdown, yaml, and robot.",
+      "example": "qitops run test-gen --path src/main.rs --format yaml",
+      "expected_action": "Try generating test cases in YAML format"
+    },
+    {
+      "title": "Using Sources",
+      "content": "You can specify sources to use for test generation using the --sources option. Sources provide additional context for test generation.",
+      "example": "qitops run test-gen --path src/main.rs --sources requirements,standards",
+      "expected_action": "Try generating test cases with specific sources"
+    },
+    {
+      "title": "Using Personas",
+      "content": "You can specify personas to use for test generation using the --personas option. Personas provide different perspectives on testing.",
+      "example": "qitops run test-gen --path src/main.rs --personas qa-engineer",
+      "expected_action": "Try generating test cases with a specific persona"
+    },
+    {
+      "title": "Reviewing Generated Tests",
+      "content": "After generating tests, review them to ensure they cover all important scenarios and edge cases. You may need to modify or add tests based on your specific requirements.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Saving and Implementing Tests",
+      "content": "Save the generated tests to a file and implement them in your test framework. QitOps generates test cases in a format that can be easily adapted to your testing framework.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Congratulations!",
+      "content": "You've completed the test generation workflow tutorial! You now know how to generate comprehensive test cases for your code using QitOps Agent.",
+      "example": null,
+      "expected_action": null
+    }
+  ],
+  "tags": [
+    "testing",
+    "workflow"
+  ],
+  "difficulty": "beginner",
+  "estimated_time": 15
+}

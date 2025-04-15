@@ -5,5 +5,5 @@ pub mod cache;
 pub mod providers;
 
 // Re-export commonly used types
-pub use client::{LlmRequest, LlmRouter, RouterConfig, ProviderConfig};
+pub use client::{LlmRequest, LlmRouter, ProviderConfig};
 pub use config::ConfigManager;

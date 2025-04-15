@@ -1,19 +1,10 @@
- This code appears to be a Rust implementation of a command-line tool for managing a monitoring system that includes Graphana (likely for visualizing data) and possibly other components. Here's an overview of the main functionalities provided:
+ This code appears to be a part of a CLI (Command Line Interface) tool or script for managing a monitoring system, possibly for containerized applications like Docker. It defines several functions such as:
 
-1. **Monitoring System Commands**: The script defines the following commands for the monitoring system:
-   - `status`: prints the status of the monitoring system (running or not).
-   - `start`: starts the monitoring system.
-   - `stop`: stops the monitoring system.
-   - `check`: checks if the monitoring system is running.
-   - A `--docker` flag can be added to any of these commands to enable Docker-based components (Grafana, etc.) when starting/checking the monitoring system.
-
-2. **Docker Commands**: The script includes functions for managing Docker components of the monitoring system:
-   - `start_docker`: starts the Docker-based components of the monitoring system.
-   - `stop_docker`: stops the Docker-based components of the monitoring system.
-   - `check_docker`: checks if the Docker-based components of the monitoring system are running.
-
-3. **Error Handling and Logging**: The script uses a custom logging function with different severity levels like `info`, `warning`, and `error`. Additionally, it includes error handling using Rust's `Result` type to manage any errors that might occur during execution.
-
-4. **Progress Indicator**: A simple progress indicator is used for long-running tasks (e.g., starting/stopping Docker components) to inform the user about the task status.
-
-Overall, this script seems like a useful tool for managing a monitoring system with Docker components more easily from the command line.
+1. `main()` - the entry point for the program, handling command-line arguments and dispatching them to other functions.
+2. Various helper functions for printing messages and handling user input (`print_welcome`, `print_menu`, etc.).
+3. Functions related to interacting with Docker, such as starting, stopping, and checking the status of a monitoring stack defined in `docker-compose-monitoring.yml`.
+4. Error handling functions using `anyhow` crate for reporting errors to the user.
+5. Utility functions like `ProgressIndicator`, which displays progress messages during long-running tasks.
+6. The code seems to use the `indicatif` crate for creating simple console UI elements, such as progress bars.
+7. It appears that the monitoring stack includes a Grafana instance, accessed at `http://localhost:3000`, with default credentials of `admin/qitops`.
+8. The program seems to support command-line options like `--docker` when starting the monitoring stack.

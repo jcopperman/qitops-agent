@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::fs;
 use std::path::Path;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::agent::{Agent, AgentResponse, AgentStatus};
 use crate::llm::{LlmRouter, LlmRequest};

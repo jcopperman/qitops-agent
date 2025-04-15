@@ -1,0 +1,55 @@
+{
+  "id": "onboarding",
+  "title": "Getting Started with QitOps",
+  "description": "Learn the basics of QitOps Agent and how to use it effectively.",
+  "steps": [
+    {
+      "title": "Welcome to QitOps",
+      "content": "QitOps is an AI-powered QA Assistant that helps you generate test cases, analyze pull requests, assess risk, and more. This tutorial will guide you through the basics.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Understanding Commands",
+      "content": "QitOps Agent provides several commands that you can use. You can execute these commands directly or use natural language to describe what you want to do.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Generating Test Cases",
+      "content": "One of the most powerful features of QitOps is the ability to generate test cases for your code. Let's try generating test cases for a file.",
+      "example": "qitops run test-gen --path src/main.rs",
+      "expected_action": "Try generating test cases for a file using the example command or by saying 'Generate test cases for src/main.rs'"
+    },
+    {
+      "title": "Analyzing Pull Requests",
+      "content": "QitOps can analyze pull requests to identify potential issues, assess test coverage, and provide recommendations.",
+      "example": "qitops run pr-analyze --pr 123",
+      "expected_action": "Try analyzing a pull request using the example command or by saying 'Analyze pull request 123'"
+    },
+    {
+      "title": "Assessing Risk",
+      "content": "QitOps can assess the risk of code changes to help you prioritize testing efforts.",
+      "example": "qitops run risk --diff changes.diff",
+      "expected_action": "Try assessing risk using the example command or by saying 'Assess risk for changes.diff'"
+    },
+    {
+      "title": "Using the Bot",
+      "content": "The QitOps Bot provides a conversational interface to QitOps Agent. You can use commands like !help, !exec, and !history to interact with the bot.",
+      "example": "!help",
+      "expected_action": "Try using the !help command to see available bot commands"
+    },
+    {
+      "title": "Congratulations!",
+      "content": "You've completed the onboarding tutorial! You now know the basics of QitOps Agent and how to use it effectively. Type !tutorials to see more tutorials.",
+      "example": null,
+      "expected_action": null
+    }
+  ],
+  "tags": [
+    "beginner",
+    "onboarding"
+  ],
+  "difficulty": "beginner",
+  "estimated_time": 10
+}

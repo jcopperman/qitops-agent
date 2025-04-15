@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::time::SystemTime;
+use crate::monitoring;
 
 use crate::llm::client::{LlmRequest, LlmResponse};
 
@@ -46,6 +47,7 @@ pub struct CacheMetrics {
 }
 
 /// LLM response cache
+#[derive(Debug)]
 pub struct ResponseCache {
     /// Cache directory
     cache_dir: PathBuf,
@@ -79,9 +81,11 @@ impl ResponseCache {
             .unwrap_or_default()
             .as_secs();
 
-        let mut metrics = CacheMetrics::default();
-        metrics.created_at = now;
-        metrics.last_access = now;
+        let mut metrics = CacheMetrics {
+            created_at: now,
+            last_access: now,
+            ..Default::default()
+        };
 
         // Count existing entries if using disk cache
         if use_disk && cache_dir.exists() {
@@ -164,6 +168,8 @@ impl ResponseCache {
             if entry.expires_at > now {
                 // Cache hit in memory
                 self.metrics.hits += 1;
+                // Also track in monitoring
+                monitoring::track_cache_hit();
                 return Some(entry.response.clone());
             }
         }
@@ -177,6 +183,8 @@ impl ResponseCache {
                         if entry.expires_at > now {
                             // Cache hit on disk
                             self.metrics.hits += 1;
+                            // Also track in monitoring
+                            monitoring::track_cache_hit();
 
                             // Add to memory cache for faster access next time
                             self.memory_cache.insert(key.clone(), entry.clone());
@@ -203,6 +211,8 @@ impl ResponseCache {
 
         // Cache miss
         self.metrics.misses += 1;
+        // Also track in monitoring
+        monitoring::track_cache_miss();
         None
     }
 
@@ -268,14 +278,12 @@ impl ResponseCache {
         self.memory_cache.clear();
 
         // If disk cache is enabled, clear disk cache
-        if self.use_disk {
-            if self.cache_dir.exists() {
-                for entry in fs::read_dir(&self.cache_dir)? {
-                    let entry = entry?;
-                    let path = entry.path();
-                    if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
-                        fs::remove_file(path)?;
-                    }
+        if self.use_disk && self.cache_dir.exists() {
+            for entry in fs::read_dir(&self.cache_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
+                    fs::remove_file(path)?;
                 }
             }
         }
@@ -312,38 +320,36 @@ impl ResponseCache {
         self.memory_cache.retain(|_, entry| entry.expires_at > now);
 
         // If disk cache is enabled, clean disk cache
-        if self.use_disk {
-            if self.cache_dir.exists() {
-                let mut disk_expired_count = 0;
-                let mut size_removed = 0;
+        if self.use_disk && self.cache_dir.exists() {
+            let mut disk_expired_count = 0;
+            let mut size_removed = 0;
 
-                for entry in fs::read_dir(&self.cache_dir)? {
-                    let entry = entry?;
-                    let path = entry.path();
-                    if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
-                        if let Ok(content) = fs::read_to_string(&path) {
-                            if let Ok(entry) = serde_json::from_str::<CacheEntry>(&content) {
-                                if entry.expires_at <= now {
-                                    // Get file size before removing
-                                    if let Ok(metadata) = fs::metadata(&path) {
-                                        size_removed += metadata.len();
-                                    }
+            for entry in fs::read_dir(&self.cache_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        if let Ok(entry) = serde_json::from_str::<CacheEntry>(&content) {
+                            if entry.expires_at <= now {
+                                // Get file size before removing
+                                if let Ok(metadata) = fs::metadata(&path) {
+                                    size_removed += metadata.len();
+                                }
 
-                                    // Remove the file
-                                    if fs::remove_file(&path).is_ok() {
-                                        disk_expired_count += 1;
-                                    }
+                                // Remove the file
+                                if fs::remove_file(&path).is_ok() {
+                                    disk_expired_count += 1;
                                 }
                             }
                         }
                     }
                 }
-
-                // Update metrics
-                self.metrics.expired_removed += disk_expired_count;
-                self.metrics.entries = self.metrics.entries.saturating_sub(disk_expired_count);
-                self.metrics.total_size_bytes = self.metrics.total_size_bytes.saturating_sub(size_removed);
             }
+
+            // Update metrics
+            self.metrics.expired_removed += disk_expired_count;
+            self.metrics.entries = self.metrics.entries.saturating_sub(disk_expired_count);
+            self.metrics.total_size_bytes = self.metrics.total_size_bytes.saturating_sub(size_removed);
         }
 
         Ok(())

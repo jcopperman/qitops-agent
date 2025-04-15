@@ -26,9 +26,10 @@ pub enum SourceType {
     Custom(String),
 }
 
-impl SourceType {
-    /// Parse source type from string
-    pub fn from_str(s: &str) -> Result<Self> {
+impl std::str::FromStr for SourceType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "requirements" => Ok(SourceType::Requirements),
             "standard" => Ok(SourceType::Standard),
@@ -39,15 +40,17 @@ impl SourceType {
         }
     }
 
-    /// Convert source type to string
-    pub fn to_string(&self) -> String {
+}
+
+impl std::fmt::Display for SourceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SourceType::Requirements => "requirements".to_string(),
-            SourceType::Standard => "standard".to_string(),
-            SourceType::TestStrategy => "test-strategy".to_string(),
-            SourceType::BugHistory => "bug-history".to_string(),
-            SourceType::Documentation => "documentation".to_string(),
-            SourceType::Custom(s) => s.clone(),
+            SourceType::Requirements => write!(f, "requirements"),
+            SourceType::Standard => write!(f, "standard"),
+            SourceType::TestStrategy => write!(f, "test-strategy"),
+            SourceType::BugHistory => write!(f, "bug-history"),
+            SourceType::Documentation => write!(f, "documentation"),
+            SourceType::Custom(s) => write!(f, "{}", s),
         }
     }
 }
@@ -102,18 +105,12 @@ impl Source {
 
 /// Source manager configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct SourceManagerConfig {
     /// Sources
     pub sources: HashMap<String, Source>,
 }
 
-impl Default for SourceManagerConfig {
-    fn default() -> Self {
-        Self {
-            sources: HashMap::new(),
-        }
-    }
-}
 
 /// Source manager
 pub struct SourceManager {
@@ -180,7 +177,7 @@ impl SourceManager {
                 let parts: Vec<&str> = source_str.split(':').collect();
                 if parts.len() >= 3 {
                     let id = parts[0].trim().to_string();
-                    let source_type = SourceType::from_str(parts[1].trim())?;
+                    let source_type = parts[1].trim().parse::<SourceType>()?;
                     let path = PathBuf::from(parts[2].trim());
 
                     // Optional description
@@ -219,7 +216,7 @@ impl SourceManager {
                 let parts: Vec<&str> = value.split(':').collect();
 
                 if parts.len() >= 2 {
-                    let source_type = SourceType::from_str(parts[0].trim())?;
+                    let source_type = parts[0].trim().parse::<SourceType>()?;
                     let path = PathBuf::from(parts[1].trim());
 
                     // Optional description

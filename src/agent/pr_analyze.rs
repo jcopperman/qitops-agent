@@ -1,6 +1,5 @@
-use anyhow::{Result, Context, anyhow};
+use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use tracing::{debug, warn, info};
 
 use crate::agent::traits::{Agent, AgentResponse, AgentStatus};
@@ -20,9 +19,10 @@ pub enum PrFocus {
     Regression,
 }
 
-impl PrFocus {
-    /// Parse a string into a PR focus
-    pub fn from_str(s: &str) -> Result<Self> {
+impl std::str::FromStr for PrFocus {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "general" => Ok(PrFocus::General),
             "security" => Ok(PrFocus::Security),
@@ -31,7 +31,9 @@ impl PrFocus {
             _ => Err(anyhow::anyhow!("Unknown PR focus: {}", s)),
         }
     }
+}
 
+impl PrFocus {
     /// Get the enhanced system prompt for this focus
     pub fn system_prompt(&self) -> String {
         match self {
@@ -159,7 +161,7 @@ impl PrAnalyzeAgent {
         // Parse focus with better error handling
         let focus = match focus {
             Some(f) => {
-                PrFocus::from_str(&f).context(format!("Invalid PR focus: '{}'. Supported values are: general, security, performance, regression", f))?
+                f.parse::<PrFocus>().context(format!("Invalid PR focus: '{}'. Supported values are: general, security, performance, regression", f))?
             },
             None => PrFocus::General,
         };

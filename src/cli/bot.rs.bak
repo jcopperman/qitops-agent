@@ -1,0 +1,680 @@
+use anyhow::{Result, anyhow};
+use clap::Subcommand;
+use std::io::{self, Write};
+use std::path::PathBuf;
+use std::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Serialize, Deserialize};
+
+use crate::llm::{LlmRouter, LlmRequest, ConfigManager};
+use crate::cli::branding;
+
+// Define the QitOpsBot and BotConfig here
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BotConfig {
+    /// System prompt
+    pub system_prompt: String,
+
+    /// Knowledge base path
+    pub knowledge_base_path: Option<PathBuf>,
+
+    /// Max history length
+    #[allow(dead_code)]
+    pub max_history_length: usize,
+}
+
+impl Default for BotConfig {
+    fn default() -> Self {
+        Self {
+            system_prompt: DEFAULT_SYSTEM_PROMPT.to_string(),
+            knowledge_base_path: None,
+            max_history_length: 10,
+        }
+    }
+}
+
+/// Default system prompt
+const DEFAULT_SYSTEM_PROMPT: &str = r#"You are QitOps Bot, an assistant for the QitOps Agent toolchain.
+Your purpose is to help users learn and use QitOps Agent effectively.
+
+QitOps Agent is an AI-powered QA Assistant that helps improve software quality through automated analysis, testing, and risk assessment.
+
+Key features of QitOps Agent:
+1. Test case generation (qitops run test-gen)
+2. Pull request analysis (qitops run pr-analyze)
+3. Risk assessment (qitops run risk)
+4. Test data generation (qitops run test-data)
+5. Interactive testing sessions (qitops run session)
+
+QitOps Agent also supports:
+- Configurable LLM routing (qitops llm)
+- GitHub integration (qitops github)
+- Source management (qitops source)
+- Persona management (qitops persona)
+
+Be helpful, concise, and accurate. If you don't know something, say so.
+Provide examples when appropriate.
+"#;
+
+/// Chat message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChatMessage {
+    /// User message
+    User(String),
+
+    /// Bot message
+    Bot(String),
+
+    /// System message
+    System(String),
+}
+
+/// Chat session
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatSession {
+    /// Session name
+    pub name: String,
+
+    /// Session timestamp
+    pub timestamp: u64,
+
+    /// Chat history
+    pub history: Vec<ChatMessage>,
+
+    /// System prompt
+    pub system_prompt: String,
+}
+
+pub struct QitOpsBot {
+    /// LLM router
+    llm_router: LlmRouter,
+
+    /// Chat history
+    chat_history: Vec<ChatMessage>,
+
+    /// Bot configuration
+    config: BotConfig,
+
+    /// Session name
+    session_name: String,
+
+    /// Session timestamp
+    session_timestamp: u64,
+}
+
+impl QitOpsBot {
+    /// Create a new QitOps Bot
+    pub async fn new(llm_router: LlmRouter, config: Option<BotConfig>) -> Self {
+        let config = config.unwrap_or_default();
+
+        // Generate a timestamp for the session
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        // Generate a session name based on the timestamp
+        let session_name = format!("session_{}", timestamp);
+
+        Self {
+            llm_router,
+            chat_history: Vec::new(),
+            config,
+            session_name,
+            session_timestamp: timestamp,
+        }
+    }
+
+    /// Start an interactive chat session
+    pub async fn start_chat_session(&mut self) -> Result<()> {
+        // Print welcome message
+        branding::print_command_header("QitOps Bot");
+        println!("Welcome to QitOps Bot! Type 'exit' or 'quit' to end the session.");
+        println!();
+
+        // Initial bot message
+        let initial_message = "Hello! I'm the QitOps Bot. How can I help you with QitOps Agent today?\n\nType !help to see available commands.";
+        println!("{}: {}", branding::colorize("QitOps Bot", branding::Color::Green), initial_message);
+        self.chat_history.push(ChatMessage::Bot(initial_message.to_string()));
+
+        // Save initial chat history
+        let _ = self.save_chat_history();
+
+        // Chat loop
+        loop {
+            // Get user input
+            print!("{}: ", branding::colorize("You", branding::Color::Blue));
+            io::stdout().flush()?;
+
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            let input = input.trim();
+
+            // Check for exit command
+            if input.eq_ignore_ascii_case("exit") || input.eq_ignore_ascii_case("quit") {
+                println!("\n{}: Goodbye! Feel free to chat again if you need help with QitOps Agent.",
+                    branding::colorize("QitOps Bot", branding::Color::Green));
+                break;
+            }
+
+            // Process user message
+            let response = self.process_message(input).await?;
+
+            // Print bot response
+            println!("{}: {}", branding::colorize("QitOps Bot", branding::Color::Green), response);
+            println!();
+        }
+
+        Ok(())
+    }
+
+    /// Process a user message
+    pub async fn process_message(&mut self, message: &str) -> Result<String> {
+        // Add user message to chat history
+        self.chat_history.push(ChatMessage::User(message.to_string()));
+
+        // Check for special commands
+        if message.starts_with("!") {
+            // Command execution request
+            if message.starts_with("!exec ") {
+                let command = message.trim_start_matches("!exec ").trim();
+                let result = self.execute_command(command).await?;
+                let response = format!("I executed the command: `{}`\n\nResult:\n```\n{}\n```", command, result);
+
+                // Add bot response to chat history
+                self.chat_history.push(ChatMessage::Bot(response.clone()));
+
+                // Save chat history
+                let _ = self.save_chat_history();
+
+                return Ok(response);
+            }
+
+            // History command
+            if message == "!history" {
+                let response = self.format_chat_history();
+                return Ok(response);
+            }
+
+            // Clear history command
+            if message == "!clear" {
+                self.chat_history.clear();
+                self.chat_history.push(ChatMessage::System("Chat history cleared.".to_string()));
+                return Ok("Chat history cleared.".to_string());
+            }
+
+            // Save history command
+            if message == "!save" {
+                match self.save_chat_history() {
+                    Ok(file_path) => {
+                        let response = format!("Chat history saved to: {}", file_path);
+                        self.chat_history.push(ChatMessage::System(response.clone()));
+                        return Ok(response);
+                    }
+                    Err(e) => {
+                        let response = format!("Failed to save chat history: {}", e);
+                        self.chat_history.push(ChatMessage::System(response.clone()));
+                        return Ok(response);
+                    }
+                }
+            }
+
+            // Load history command
+            if message.starts_with("!load ") {
+                let session_name = message.trim_start_matches("!load ").trim();
+                match self.load_chat_history(session_name) {
+                    Ok(_) => {
+                        let response = format!("Loaded chat history from session: {}", session_name);
+                        self.chat_history.push(ChatMessage::System(response.clone()));
+                        return Ok(response);
+                    }
+                    Err(e) => {
+                        let response = format!("Failed to load chat history: {}", e);
+                        self.chat_history.push(ChatMessage::System(response.clone()));
+                        return Ok(response);
+                    }
+                }
+            }
+
+            // List sessions command
+            if message == "!sessions" {
+                match Self::list_chat_sessions() {
+                    Ok(sessions) => {
+                        if sessions.is_empty() {
+                            let response = "No saved chat sessions found.".to_string();
+                            self.chat_history.push(ChatMessage::System(response.clone()));
+                            return Ok(response);
+                        } else {
+                            let response = format!("Available chat sessions:\n{}\n\nUse !load <session_name> to load a session.",
+                                sessions.iter().map(|s| format!("- {}", s)).collect::<Vec<_>>().join("\n"));
+                            self.chat_history.push(ChatMessage::System(response.clone()));
+                            return Ok(response);
+                        }
+                    }
+                    Err(e) => {
+                        let response = format!("Failed to list chat sessions: {}", e);
+                        self.chat_history.push(ChatMessage::System(response.clone()));
+                        return Ok(response);
+                    }
+                }
+            }
+
+            // Help command
+            if message == "!help" {
+                let response = self.get_help_text();
+                self.chat_history.push(ChatMessage::System(response.clone()));
+                return Ok(response);
+            }
+        }
+
+        // Check if the message is a natural language command
+        if let Some(command) = self.parse_natural_language_command(message).await? {
+            let result = self.execute_command(&command).await?;
+            let response = format!("I interpreted your request as the command: `{}`\n\nResult:\n```\n{}\n```", command, result);
+
+            // Add bot response to chat history
+            self.chat_history.push(ChatMessage::Bot(response.clone()));
+
+            // Save chat history
+            let _ = self.save_chat_history();
+
+            return Ok(response);
+        }
+
+        // Create the LLM request
+        let prompt = self.generate_prompt();
+        let model = self.llm_router.default_model().unwrap_or_else(|| "mistral".to_string());
+        let mut request = LlmRequest::new(prompt, model)
+            .with_system_message(self.config.system_prompt.clone());
+
+        // Add knowledge base information if available
+        if let Some(kb_path) = &self.config.knowledge_base_path {
+            if let Ok(kb_info) = self.get_knowledge_base_info(message, kb_path) {
+                if !kb_info.is_empty() {
+                    request = request.with_additional_context(format!("Knowledge base information:\n{}\n", kb_info));
+                }
+            }
+        }
+
+        // Send the request to the LLM
+        let llm_response = self.llm_router.send(request, None).await?;
+
+        // Extract the text from the response
+        let response_text = llm_response.text;
+
+        // Add bot response to chat history
+        self.chat_history.push(ChatMessage::Bot(response_text.clone()));
+
+        // Save chat history
+        let _ = self.save_chat_history();
+
+        Ok(response_text)
+    }
+
+    /// Generate the prompt for the LLM
+    fn generate_prompt(&self) -> String {
+        // Convert chat history to a prompt
+        let mut prompt = String::new();
+
+        for message in &self.chat_history {
+            match message {
+                ChatMessage::User(text) => {
+                    prompt.push_str(&format!("User: {}\n", text));
+                },
+                ChatMessage::Bot(text) => {
+                    prompt.push_str(&format!("QitOps Bot: {}\n", text));
+                },
+                ChatMessage::System(text) => {
+                    prompt.push_str(&format!("System: {}\n", text));
+                },
+            }
+        }
+
+        prompt
+    }
+
+    /// Save the chat history to a file
+    pub fn save_chat_history(&self) -> Result<String> {
+        // Create the chat sessions directory if it doesn't exist
+        let sessions_dir = PathBuf::from("chat_sessions");
+        if !sessions_dir.exists() {
+            fs::create_dir_all(&sessions_dir)?;
+        }
+
+        // Create a chat session object
+        let session = ChatSession {
+            name: self.session_name.clone(),
+            timestamp: self.session_timestamp,
+            history: self.chat_history.clone(),
+            system_prompt: self.config.system_prompt.clone(),
+        };
+
+        // Serialize the chat session
+        let session_json = serde_json::to_string_pretty(&session)
+            .map_err(|e| anyhow!("Failed to serialize chat session: {}", e))?;
+
+        // Save the chat session to a file
+        let file_path = sessions_dir.join(format!("{}.json", self.session_name));
+        fs::write(&file_path, session_json)
+            .map_err(|e| anyhow!("Failed to write chat session file: {}", e))?;
+
+        Ok(file_path.to_string_lossy().to_string())
+    }
+
+    /// Load a chat session from a file
+    pub fn load_chat_history(&mut self, session_name: &str) -> Result<()> {
+        // Get the chat sessions directory
+        let sessions_dir = PathBuf::from("chat_sessions");
+        if !sessions_dir.exists() {
+            return Err(anyhow!("No chat sessions found"));
+        }
+
+        // Get the session file path
+        let file_path = sessions_dir.join(format!("{}.json", session_name));
+        if !file_path.exists() {
+            return Err(anyhow!("Chat session not found: {}", session_name));
+        }
+
+        // Read the session file
+        let session_json = fs::read_to_string(&file_path)
+            .map_err(|e| anyhow!("Failed to read chat session file: {}", e))?;
+
+        // Deserialize the chat session
+        let session: ChatSession = serde_json::from_str(&session_json)
+            .map_err(|e| anyhow!("Failed to deserialize chat session: {}", e))?;
+
+        // Update the bot with the session data
+        self.chat_history = session.history;
+        self.session_name = session.name;
+        self.session_timestamp = session.timestamp;
+        self.config.system_prompt = session.system_prompt;
+
+        Ok(())
+    }
+
+    /// Format chat history as a string
+    fn format_chat_history(&self) -> String {
+        let mut history = String::new();
+        history.push_str("Chat History:\n\n");
+
+        for (i, message) in self.chat_history.iter().enumerate() {
+            match message {
+                ChatMessage::User(text) => {
+                    history.push_str(&format!("[{}] User: {}\n", i + 1, text));
+                },
+                ChatMessage::Bot(text) => {
+                    history.push_str(&format!("[{}] QitOps Bot: {}\n", i + 1, text));
+                },
+                ChatMessage::System(text) => {
+                    history.push_str(&format!("[{}] System: {}\n", i + 1, text));
+                },
+            }
+            history.push('\n');
+        }
+
+        history
+    }
+
+    /// Get help text
+    fn get_help_text(&self) -> String {
+        let mut help = String::new();
+        help.push_str("QitOps Bot Commands:\n\n");
+        help.push_str("!help - Show this help message\n");
+        help.push_str("!exec <command> - Execute a QitOps Agent command\n");
+        help.push_str("!history - Show chat history\n");
+        help.push_str("!clear - Clear chat history\n");
+        help.push_str("!save - Save chat history to a file\n");
+        help.push_str("!sessions - List available chat sessions\n");
+        help.push_str("!load <session_name> - Load a chat session\n");
+        help.push_str("\nYou can also use natural language to execute commands. For example:\n");
+        help.push_str("- 'Generate test cases for src/main.rs'\n");
+        help.push_str("- 'Analyze pull request 123'\n");
+        help.push_str("- 'Assess risk for changes.diff'\n");
+
+        help
+    }
+
+    /// List available chat sessions
+    pub fn list_chat_sessions() -> Result<Vec<String>> {
+        // Get the chat sessions directory
+        let sessions_dir = PathBuf::from("chat_sessions");
+        if !sessions_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        // Get all JSON files in the directory
+        let mut sessions = Vec::new();
+        for entry in fs::read_dir(sessions_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+                if let Some(file_name) = path.file_stem() {
+                    if let Some(session_name) = file_name.to_str() {
+                        sessions.push(session_name.to_string());
+                    }
+                }
+            }
+        }
+
+        // Sort sessions by name (which includes timestamp)
+        sessions.sort();
+
+        Ok(sessions)
+    }
+
+    /// Execute a QitOps Agent command
+    pub async fn execute_command(&self, command: &str) -> Result<String> {
+        // Parse the command
+        let args = shlex::split(command).ok_or_else(|| anyhow::anyhow!("Failed to parse command"))?;
+
+        // Create a new process
+        let mut process = std::process::Command::new("qitops");
+        process.args(&args);
+
+        // Execute the command
+        let output = process.output()?;
+
+        // Return the output
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+        if !stderr.is_empty() {
+            Ok(format!("Command output:\n{}\n\nErrors:\n{}", stdout, stderr))
+        } else {
+            Ok(format!("Command output:\n{}", stdout))
+        }
+    }
+
+    /// Parse a natural language command
+    pub async fn parse_natural_language_command(&self, message: &str) -> Result<Option<String>> {
+        // Check if the message looks like a command request
+        let command_indicators = [
+            "run", "execute", "start", "generate", "analyze", "test", "create",
+            "show", "list", "add", "remove", "set", "config", "help"
+        ];
+
+        let is_command_request = command_indicators.iter().any(|&indicator| {
+            message.to_lowercase().contains(&format!(" {} ", indicator)) ||
+            message.to_lowercase().starts_with(&format!("{} ", indicator))
+        });
+
+        if !is_command_request {
+            return Ok(None);
+        }
+
+        // Create a prompt for the LLM to parse the natural language command
+        let prompt = format!(
+            "Convert the following natural language request into a QitOps Agent command.\n\n\
+            Request: {}\n\n\
+            Respond with ONLY the command, without any explanation or markdown formatting.\n\
+            If you're not sure, respond with 'UNKNOWN'.\n\n\
+            Available commands:\n\
+            - qitops run test-gen --path <file_path> [--format <format>] [--sources <sources>] [--personas <personas>]\n\
+            - qitops run pr-analyze --pr <pr_number> [--sources <sources>] [--personas <personas>]\n\
+            - qitops run risk --diff <diff_path> [--components <components>] [--focus <focus_areas>]\n\
+            - qitops run test-data --schema <schema> --count <count> [--format <format>]\n\
+            - qitops run session --name <name> [--application <app>] [--focus <focus>]\n\
+            - qitops llm list\n\
+            - qitops llm add --provider <provider> --api-key <api_key> [--api-base <api_base>] [--model <model>]\n\
+            - qitops llm remove --provider <provider>\n\
+            - qitops llm set-default --provider <provider>\n\
+            - qitops llm test [--provider <provider>] [--prompt <prompt>] [--no-cache]\n\
+            - qitops github config --token <token> [--owner <owner>] [--repo <repo>]\n\
+            - qitops source list\n\
+            - qitops source show --id <id>\n\
+            - qitops persona list\n\
+            - qitops persona show --id <id>\
+            ",
+            message
+        );
+
+        // Send the request to the LLM
+        let model = self.llm_router.default_model().unwrap_or_else(|| "mistral".to_string());
+        let request = LlmRequest::new(prompt, model)
+            .with_system_message("You are a command parser for QitOps Agent. Your task is to convert natural language requests into valid QitOps Agent commands.".to_string());
+
+        let llm_response = self.llm_router.send(request, None).await?;
+        let command = llm_response.text.trim();
+
+        // Check if the LLM couldn't parse the command
+        if command == "UNKNOWN" || command.contains("I'm not sure") || command.contains("I don't know") {
+            return Ok(None);
+        }
+
+        // Remove any markdown formatting
+        let command = command.trim_start_matches("```").trim_end_matches("```").trim();
+        let command = command.trim_start_matches("bash").trim();
+        let command = command.trim_start_matches("qitops ").trim();
+
+        Ok(Some(command.to_string()))
+    }
+
+    /// Get information from the knowledge base relevant to the user's message
+    pub fn get_knowledge_base_info(&self, message: &str, kb_path: &PathBuf) -> Result<String> {
+        use crate::bot::knowledge::KnowledgeBase;
+
+        // Try to load the knowledge base
+        let kb = match KnowledgeBase::load(kb_path) {
+            Ok(kb) => kb,
+            Err(e) => {
+                tracing::warn!("Failed to load knowledge base: {}", e);
+                return Ok(String::new());
+            }
+        };
+
+        let mut kb_info = String::new();
+
+        // Check for command-related questions
+        for (cmd_name, cmd_doc) in &kb.commands {
+            if message.to_lowercase().contains(&cmd_name.to_lowercase()) {
+                kb_info.push_str(&format!("Command: {}\n", cmd_name));
+                kb_info.push_str(&format!("Description: {}\n", cmd_doc.description));
+                kb_info.push_str(&format!("Usage: {}\n", cmd_doc.usage));
+                kb_info.push_str("Examples:\n");
+                for example in &cmd_doc.examples {
+                    kb_info.push_str(&format!("- {}\n", example));
+                }
+                kb_info.push_str("Options:\n");
+                for (option, desc) in &cmd_doc.options {
+                    kb_info.push_str(&format!("- {}: {}\n", option, desc));
+                }
+                kb_info.push('\n');
+            }
+        }
+
+        // Check for FAQ matches
+        let faq_entries = kb.search_faq(message);
+        if !faq_entries.is_empty() {
+            kb_info.push_str("Relevant FAQs:\n");
+            for entry in faq_entries.iter().take(3) {
+                kb_info.push_str(&format!("Q: {}\n", entry.question));
+                kb_info.push_str(&format!("A: {}\n\n", entry.answer));
+            }
+        }
+
+        // Check for example matches
+        let examples = kb.search_examples(message);
+        if !examples.is_empty() {
+            kb_info.push_str("Relevant Examples:\n");
+            for example in examples.iter().take(2) {
+                kb_info.push_str(&format!("Title: {}\n", example.title));
+                kb_info.push_str(&format!("Description: {}\n", example.description));
+                kb_info.push_str(&format!("Code: {}\n\n", example.code));
+            }
+        }
+
+        Ok(kb_info)
+    }
+}
+
+/// Bot CLI arguments
+#[derive(Debug, clap::Args)]
+pub struct BotArgs {
+    /// Bot subcommand
+    #[clap(subcommand)]
+    pub command: BotCommand,
+}
+
+/// Bot subcommands
+#[derive(Debug, Subcommand)]
+pub enum BotCommand {
+    /// Start a chat session with QitOps Bot
+    #[clap(name = "chat")]
+    Chat {
+        /// System prompt file
+        #[clap(short, long)]
+        system_prompt: Option<String>,
+
+        /// Knowledge base path
+        #[clap(short, long)]
+        knowledge_base: Option<String>,
+    },
+}
+
+/// Handle bot commands
+pub async fn handle_bot_command(args: &BotArgs) -> Result<()> {
+    match &args.command {
+        BotCommand::Chat { system_prompt, knowledge_base } => {
+            chat(system_prompt, knowledge_base).await
+        },
+    }
+}
+
+/// Start a chat session with QitOps Bot
+async fn chat(system_prompt: &Option<String>, knowledge_base: &Option<String>) -> Result<()> {
+    // Initialize LLM router
+    let progress = crate::cli::progress::ProgressIndicator::new("Initializing LLM router...");
+    let config_manager = ConfigManager::new()?;
+    let llm_router = LlmRouter::new(config_manager.get_config().clone()).await?;
+    progress.finish();
+
+    // Create bot configuration
+    let mut config = BotConfig::default();
+
+    // Load system prompt from file if provided
+    if let Some(system_prompt_path) = system_prompt {
+        let system_prompt_content = std::fs::read_to_string(system_prompt_path)?;
+        config.system_prompt = system_prompt_content;
+    }
+
+    // Set knowledge base path if provided
+    if let Some(kb_path) = knowledge_base {
+        let kb_path_buf = std::path::PathBuf::from(kb_path);
+        if kb_path_buf.exists() {
+            config.knowledge_base_path = Some(kb_path_buf);
+            println!("Using knowledge base from: {}", kb_path);
+        } else {
+            println!("Warning: Knowledge base path does not exist: {}", kb_path);
+            println!("Continuing without knowledge base.");
+        }
+    }
+
+    // Create QitOps Bot
+    let mut bot = QitOpsBot::new(llm_router, Some(config)).await;
+
+    // Start chat session
+    bot.start_chat_session().await?;
+
+    Ok(())
+}

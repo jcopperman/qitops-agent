@@ -6,6 +6,10 @@ use walkdir::WalkDir;
 use serde::{Serialize, Deserialize};
 use tracing::{info, debug, warn};
 
+// Export the context provider
+mod provider;
+pub use provider::ContextProvider;
+
 /// Repository context manager
 pub struct RepositoryContext {
     /// Root directory of the repository
@@ -466,13 +470,10 @@ impl RepositoryContext {
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_default();
 
-                if (file_name.starts_with("test_") && file_name.contains(&name)) ||
+                if ((file_name.starts_with("test_") && file_name.contains(&name)) ||
                    (file_name.ends_with("_test.rs") && file_name.contains(&name)) ||
-                   (file_name.ends_with(".test.js") && file_name.contains(&name)) ||
-                   (file_name.ends_with(".spec.js") && file_name.contains(&name)) {
-                    if !related_files.contains(&file.path) {
-                        related_files.push(file.path.clone());
-                    }
+                   (file_name.ends_with(".test.js") && file_name.contains(&name)) || (file_name.ends_with(".spec.js") && file_name.contains(&name))) && !related_files.contains(&file.path) {
+                    related_files.push(file.path.clone());
                 }
             }
         }
@@ -706,7 +707,7 @@ impl RepositoryContext {
                 .join("\n");
 
             context.push_str(&standards_summary);
-            context.push_str("\n");
+            context.push('\n');
         }
 
         // Truncate if too long

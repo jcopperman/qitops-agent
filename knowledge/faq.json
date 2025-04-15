@@ -48,5 +48,50 @@
     "question": "How do I use QitOps Agent in CI/CD?",
     "answer": "You can use QitOps Agent in CI/CD pipelines by installing it and configuring it in your CI/CD workflow. For example, in GitHub Actions:\n\n```yaml\nname: QitOps PR Analysis\n\non:\n  pull_request:\n    types: [opened, synchronize, reopened]\n\njobs:\n  analyze-pr:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n        \n      - name: Install QitOps Agent\n        run: |\n          git clone https://github.com/jcopperman/qitops-agent.git /tmp/qitops-agent\n          cd /tmp/qitops-agent\n          chmod +x install.sh\n          ./install.sh\n          echo \"$HOME/.qitops/bin\" >> $GITHUB_PATH\n          \n      - name: Configure QitOps\n        run: |\n          qitops github config --token ${{ secrets.GITHUB_TOKEN }}\n          \n      - name: Analyze PR\n        run: |\n          qitops run pr-analyze --pr ${{ github.event.pull_request.number }}\n```",
     "tags": ["ci/cd", "github-actions"]
+  },
+  {
+    "question": "How do I start a chat session with QitOps Bot?",
+    "answer": "You can start a chat session with QitOps Bot using the `bot` command:\n\n```bash\nqitops bot chat\n```\n\nYou can also specify a custom system prompt and knowledge base:\n\n```bash\nqitops bot chat --system-prompt custom_prompt.txt --knowledge-base /path/to/knowledge\n```",
+    "tags": ["bot", "chat"]
+  },
+  {
+    "question": "What commands are available in the QitOps Bot chat session?",
+    "answer": "In a QitOps Bot chat session, you can use the following commands:\n\n- `!help` - Show available commands\n- `!history` - Show chat history\n- `!clear` - Clear chat history\n- `!save` - Save chat history to a file\n- `!load <session_name>` - Load a saved chat session\n- `!sessions` - List available chat sessions\n- `!exec <command>` - Execute a QitOps Agent command\n- `exit` or `quit` - End the chat session",
+    "tags": ["bot", "commands"]
+  },
+  {
+    "question": "How do I save and load chat sessions?",
+    "answer": "In a QitOps Bot chat session, you can save the current session using the `!save` command. This will save the chat history to a file in the `chat_sessions` directory.\n\nTo list available saved sessions, use the `!sessions` command.\n\nTo load a saved session, use the `!load <session_name>` command, where `<session_name>` is the name of the session file without the `.json` extension.",
+    "tags": ["bot", "sessions"]
+  },
+  {
+    "question": "How do I execute QitOps commands from the chat session?",
+    "answer": "In a QitOps Bot chat session, you can execute QitOps commands in two ways:\n\n1. Use the `!exec` command followed by the QitOps command:\n\n```\n!exec run test-gen --path src/module.js\n```\n\n2. Ask the bot in natural language, and it will interpret your request and execute the appropriate command:\n\n```\nCan you generate test cases for the src/module.js file?\n```",
+    "tags": ["bot", "commands"]
+  },
+  {
+    "question": "How do I use caching with LLM requests?",
+    "answer": "QitOps Agent caches LLM responses by default to improve performance and reduce API costs. You can control caching behavior using the `--no-cache` option:\n\n```bash\nqitops llm test --provider openai --prompt \"Generate a test case\" --no-cache\n```\n\nTo clear the cache, you can delete the cache directory at `~/.qitops/cache`.",
+    "tags": ["llm", "cache"]
+  },
+  {
+    "question": "How do I troubleshoot QitOps Agent issues?",
+    "answer": "If you encounter issues with QitOps Agent, you can try the following troubleshooting steps:\n\n1. Check the logs in `~/.qitops/logs`\n2. Run commands with the `--verbose` flag for more detailed output\n3. Verify your configuration in `~/.qitops/config.json`\n4. Ensure your LLM providers are correctly configured\n5. Check your GitHub token and permissions\n6. Update to the latest version of QitOps Agent\n\nIf you still have issues, please report them on the GitHub repository.",
+    "tags": ["troubleshooting"]
+  },
+  {
+    "question": "How do I update QitOps Agent?",
+    "answer": "You can update QitOps Agent by pulling the latest changes from the repository and running the installation script:\n\n```bash\ncd /path/to/qitops-agent\ngit pull\nchmod +x install.sh\n./install.sh\n```\n\nOn Windows, use `install.ps1` instead of `install.sh`.",
+    "tags": ["installation", "update"]
+  },
+  {
+    "question": "What LLM providers are supported?",
+    "answer": "QitOps Agent supports the following LLM providers:\n\n1. OpenAI (GPT-3.5, GPT-4)\n2. Ollama (local models like Mistral, Llama, etc.)\n3. Anthropic (Claude)\n4. Azure OpenAI\n\nYou can configure these providers using the `llm` command.",
+    "tags": ["llm", "providers"]
+  },
+  {
+    "question": "How do I contribute to QitOps Agent?",
+    "answer": "You can contribute to QitOps Agent by following these steps:\n\n1. Fork the repository on GitHub\n2. Create a new branch for your feature or bug fix\n3. Make your changes and add tests\n4. Run the tests to ensure they pass\n5. Submit a pull request\n\nPlease refer to the CONTRIBUTING.md file in the repository for more detailed guidelines.",
+    "tags": ["contribution", "development"]
   }
 ]

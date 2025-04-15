@@ -3,6 +3,7 @@ use thiserror::Error;
 
 /// Plugin loader error
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum PluginError {
     /// Plugin not found
     #[error("Plugin not found: {0}")]
@@ -19,6 +20,7 @@ pub enum PluginError {
 
 /// Plugin metadata
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PluginMetadata {
     /// Plugin name
     pub name: String,
@@ -34,6 +36,7 @@ pub struct PluginMetadata {
 }
 
 /// Plugin trait
+#[allow(dead_code)]
 pub trait Plugin {
     /// Initialize the plugin
     fn init(&mut self) -> Result<()>;
@@ -46,6 +49,7 @@ pub trait Plugin {
 }
 
 /// Plugin loader
+#[allow(dead_code)]
 pub struct PluginLoader {
     /// Plugin directory
     #[allow(dead_code)]
@@ -55,6 +59,7 @@ pub struct PluginLoader {
     plugins: Vec<Box<dyn Plugin>>,
 }
 
+#[allow(dead_code)]
 impl PluginLoader {
     /// Create a new plugin loader
     pub fn new(plugin_dir: String) -> Self {
@@ -73,8 +78,8 @@ impl PluginLoader {
     }
 
     /// Get a plugin by name
-    pub fn get_plugin(&self, name: &str) -> Option<&Box<dyn Plugin>> {
-        self.plugins.iter().find(|p| p.metadata().name == name)
+    pub fn get_plugin(&self, name: &str) -> Option<&dyn Plugin> {
+        self.plugins.iter().find(|p| p.metadata().name == name).map(|v| &**v)
     }
 
     /// Get all loaded plugins

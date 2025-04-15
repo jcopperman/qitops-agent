@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use tracing::{info, debug, warn};
+use crate::context::ContextProvider;
+use crate::monitoring;
 
 use crate::agent::traits::{Agent, AgentResponse, AgentStatus};
 use crate::llm::{LlmRequest, LlmRouter};
@@ -19,7 +21,7 @@ pub enum TestFormat {
 }
 
 impl TestFormat {
-    /// Parse a string into a test format
+    /// Parse test format from string
     pub fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "markdown" | "md" => Ok(TestFormat::Markdown),
@@ -29,141 +31,27 @@ impl TestFormat {
         }
     }
 
-    /// Get the file extension for this format
-    pub fn extension(&self) -> &'static str {
-        match self {
-            TestFormat::Markdown => "md",
-            TestFormat::Yaml => "yaml",
-            TestFormat::Robot => "robot",
-        }
-    }
-
-    /// Get the enhanced system prompt for this format
+    /// Get system prompt for test format
     pub fn system_prompt(&self) -> String {
         match self {
             TestFormat::Markdown => {
-                "You are an expert test engineer specializing in creating comprehensive test cases. \
-                Your task is to generate detailed test cases in Markdown format that:
-
-\
-                1. Cover all functionality in the provided code
-\
-                2. Include both positive and negative test scenarios
-\
-                3. Test edge cases and boundary conditions
-\
-                4. Verify error handling and exception paths
-\
-                5. Are clearly organized with descriptive headers
-
-\
-                Format your response using proper Markdown with:
-\
-                - Clear hierarchical headers (## for test categories, ### for individual tests)
-\
-                - Bulleted lists for test steps
-\
-                - Code blocks for example inputs and expected outputs
-\
-                - Tables where appropriate to organize test data
-
-\
-                Each test case should include:
-\
-                - A unique identifier and descriptive name
-\
-                - Preconditions and setup requirements
-\
-                - Test steps with specific inputs
-\
-                - Expected results and verification points
-\
-                - Any cleanup or teardown steps".to_string()
-            },
+                "You are a test case generator. Generate comprehensive test cases for the given code. Focus on edge cases, error handling, and important functionality. Format the test cases in Markdown with clear sections for each test case, including description, inputs, expected outputs, and edge cases.".to_string()
+            }
             TestFormat::Yaml => {
-                "You are an expert test engineer specializing in creating comprehensive test cases. \
-                Your task is to generate detailed test cases in YAML format that:
-
-\
-                1. Cover all functionality in the provided code
-\
-                2. Include both positive and negative test scenarios
-\
-                3. Test edge cases and boundary conditions
-\
-                4. Verify error handling and exception paths
-\
-                5. Are structured for easy automation
-
-\
-                Follow proper YAML syntax and indentation. Structure your test cases with a test suite containing tests, each with an ID, name, description, preconditions, steps, and cleanup actions.
-
-\
-                Ensure your YAML is valid and properly indented.".to_string()
-            },
+                "You are a test case generator. Generate comprehensive test cases for the given code. Focus on edge cases, error handling, and important functionality. Format the test cases in YAML with clear structure for each test case, including description, inputs, expected outputs, and edge cases.".to_string()
+            }
             TestFormat::Robot => {
-                "You are an expert test automation engineer specializing in Robot Framework. \
-                Your task is to generate detailed test cases in Robot Framework format that:
+                "You are a test case generator. Generate comprehensive test cases for the given code. Focus on edge cases, error handling, and important functionality. Format the test cases in Robot Framework format with clear test cases, including documentation, setup, teardown, and test steps.".to_string()
+            }
+        }
+    }
 
-\
-                1. Cover all functionality in the provided code
-\
-                2. Include both positive and negative test scenarios
-\
-                3. Test edge cases and boundary conditions
-\
-                4. Verify error handling and exception paths
-\
-                5. Follow Robot Framework best practices
-
-\
-                Structure your test cases using proper Robot Framework syntax with:
-
-\
-                ```robot
-\
-                *** Settings ***
-\
-                Documentation    Test suite description
-\
-                Library          Appropriate libraries
-
-\
-                *** Variables ***
-\
-                ${VARIABLE}      Value
-
-\
-                *** Test Cases ***
-\
-                Test Case Name
-\
-                    [Documentation]    Test case description
-\
-                    [Setup]            Setup keyword
-\
-                    Step Keyword       Arguments
-\
-                    Verification Keyword    Expected result
-\
-                    [Teardown]         Teardown keyword
-
-\
-                *** Keywords ***
-\
-                Custom Keyword
-\
-                    [Arguments]    ${arg1}    ${arg2}
-\
-                    # Keyword implementation
-\
-                    [Return]    Return value
-\
-                ```
-
-\
-                Use appropriate Robot Framework libraries and keywords based on the code being tested.".to_string()
-            },
+    /// Get file extension for test format
+    pub fn extension(&self) -> String {
+        match self {
+            TestFormat::Markdown => "md".to_string(),
+            TestFormat::Yaml => "yaml".to_string(),
+            TestFormat::Robot => "robot".to_string(),
         }
     }
 }
@@ -187,49 +75,15 @@ pub struct TestGenAgent {
 }
 
 impl TestGenAgent {
-    /// Create a new test case generator agent with input validation
+    /// Create a new test case generator agent
     pub async fn new(
         path: String,
-        format: &str,
+        format: String,
         sources: Option<Vec<String>>,
         personas: Option<Vec<String>>,
-        llm_router: LlmRouter
+        llm_router: LlmRouter,
     ) -> Result<Self> {
-        // Validate the format
-        let format = TestFormat::from_str(format)
-            .context(format!("Invalid test format: '{}'. Supported formats are: markdown, yaml, robot", format))?;
-
-        // Validate the path exists
-        let file_path = Path::new(&path);
-        if !file_path.exists() {
-            return Err(anyhow::anyhow!("File not found: {}", path));
-        }
-
-        // Validate the path is readable
-        match fs::metadata(file_path) {
-            Ok(metadata) => {
-                if metadata.is_dir() {
-                    return Err(anyhow::anyhow!("Path is a directory, not a file: {}", path));
-                }
-            },
-            Err(e) => {
-                return Err(anyhow::anyhow!("Cannot access file metadata for {}: {}", path, e));
-            }
-        }
-
-        // Validate sources if provided
-        if let Some(sources) = &sources {
-            if sources.is_empty() {
-                return Err(anyhow::anyhow!("Sources list is empty. Either provide valid sources or omit the parameter."));
-            }
-        }
-
-        // Validate personas if provided
-        if let Some(personas) = &personas {
-            if personas.is_empty() {
-                return Err(anyhow::anyhow!("Personas list is empty. Either provide valid personas or omit the parameter."));
-            }
-        }
+        let format = TestFormat::from_str(&format)?;
 
         Ok(Self {
             path,
@@ -247,57 +101,79 @@ impl TestGenAgent {
             return Err(anyhow::anyhow!("File not found: {}", self.path));
         }
 
-        // Try to read the file with better error handling
-        match fs::read_to_string(path) {
-            Ok(content) => Ok(content),
-            Err(e) => {
-                // Provide more specific error messages based on the error kind
-                match e.kind() {
-                    std::io::ErrorKind::PermissionDenied => {
-                        Err(anyhow::anyhow!("Permission denied when reading file: {}. Try running with administrator privileges or check file permissions.", self.path))
-                    },
-                    std::io::ErrorKind::NotFound => {
-                        Err(anyhow::anyhow!("File not found: {}", self.path))
-                    },
-                    _ => {
-                        Err(anyhow::anyhow!("Failed to read file: {}. Error: {}", self.path, e))
-                    }
-                }
-            }
-        }
+        fs::read_to_string(path).context("Failed to read source code")
     }
 
     /// Generate the prompt for the LLM
     async fn generate_prompt(&self, source_code: &str) -> Result<String> {
+        // Start a timer for monitoring
+        let timer = monitoring::Timer::new("test_gen_prompt");
+
         let mut prompt = format!(
             "Generate comprehensive test cases for the following code. Focus on edge cases, error handling, and important functionality.\n\nCode:\n```\n{}\n```",
             source_code
         );
 
-        // Add sources if available
-        if let Some(sources) = &self.sources {
+        // Add context from sources and personas
+        let context_provider = ContextProvider::new()?;
+
+        // Get sources (either from command line or defaults)
+        let sources_vec: Vec<String>;
+        let sources = if let Some(sources) = &self.sources {
             if !sources.is_empty() {
-                let source_manager = crate::cli::source::SourceManager::new()?;
-                let source_content = source_manager.get_content_for_sources(sources)?;
-
-                if !source_content.is_empty() {
-                    prompt.push_str("\n\nAdditional context from sources:\n");
-                    prompt.push_str(&source_content);
+                Some(sources.as_slice())
+            } else {
+                // Try to get default sources
+                sources_vec = context_provider.get_default_sources("test-gen")?;
+                if !sources_vec.is_empty() {
+                    Some(sources_vec.as_slice())
+                } else {
+                    None
                 }
             }
-        }
+        } else {
+            // Try to get default sources
+            sources_vec = context_provider.get_default_sources("test-gen")?;
+            if !sources_vec.is_empty() {
+                Some(sources_vec.as_slice())
+            } else {
+                None
+            }
+        };
 
-        // Add personas if available
-        if let Some(personas) = &self.personas {
+        // Get personas (either from command line or defaults)
+        let personas_vec: Vec<String>;
+        let personas = if let Some(personas) = &self.personas {
             if !personas.is_empty() {
-                let persona_manager = crate::cli::persona::PersonaManager::new()?;
-                let persona_prompt = persona_manager.get_prompt_for_personas(personas)?;
-
-                if !persona_prompt.is_empty() {
-                    prompt = format!("{}\n\n{}", persona_prompt, prompt);
+                Some(personas.as_slice())
+            } else {
+                // Try to get default personas
+                personas_vec = context_provider.get_default_personas("test-gen")?;
+                if !personas_vec.is_empty() {
+                    Some(personas_vec.as_slice())
+                } else {
+                    None
                 }
             }
+        } else {
+            // Try to get default personas
+            personas_vec = context_provider.get_default_personas("test-gen")?;
+            if !personas_vec.is_empty() {
+                Some(personas_vec.as_slice())
+            } else {
+                None
+            }
+        };
+
+        // Get context from sources and personas
+        let context = context_provider.get_context(sources, personas)?;
+        if !context.is_empty() {
+            prompt.push_str("\n\n");
+            prompt.push_str(&context);
         }
+
+        // Stop the timer
+        timer.stop();
 
         Ok(prompt)
     }
@@ -332,6 +208,10 @@ impl Agent for TestGenAgent {
     }
 
     async fn execute(&self) -> Result<AgentResponse> {
+        // Start a timer for monitoring
+        let timer = monitoring::Timer::new("test_gen");
+        monitoring::track_command("test-gen");
+
         // Read the source code
         let source_code = match self.read_source_code() {
             Ok(code) => code,
@@ -392,6 +272,9 @@ impl Agent for TestGenAgent {
                 });
             }
         };
+
+        // Stop the timer
+        timer.stop();
 
         // Return the response
         Ok(AgentResponse {
