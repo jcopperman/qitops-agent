@@ -1,8 +1,8 @@
-use anyhow::{Result, anyhow, Context};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// Persona
 #[derive(Debug, Clone, Serialize, Deserialize)]

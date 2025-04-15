@@ -2,7 +2,6 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::fs;
 
 pub mod knowledge;
 use knowledge::KnowledgeBase;

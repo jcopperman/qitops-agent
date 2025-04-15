@@ -63,7 +63,7 @@ pub struct PrAnalyzeAgent {
 }
 
 impl PrAnalyzeAgent {
-    /// Create a new PR analysis agent
+    /// Create a new PR analysis agent with enhanced input validation
     pub async fn new(
         pr: String,
         focus: Option<String>,
@@ -72,19 +72,42 @@ impl PrAnalyzeAgent {
         github_client: GitHubClient,
         llm_router: LlmRouter
     ) -> Result<Self> {
+        // Validate PR input
+        if pr.is_empty() {
+            return Err(anyhow::anyhow!("PR number or URL cannot be empty"));
+        }
+
+        // Validate owner and repo
+        if owner.is_empty() {
+            return Err(anyhow::anyhow!("Repository owner cannot be empty"));
+        }
+
+        if repo.is_empty() {
+            return Err(anyhow::anyhow!("Repository name cannot be empty"));
+        }
+
+        // Parse focus with better error handling
         let focus = match focus {
-            Some(f) => PrFocus::from_str(&f)?,
+            Some(f) => {
+                PrFocus::from_str(&f).context(format!("Invalid PR focus: '{}'. Supported values are: general, security, performance, regression", f))?
+            },
             None => PrFocus::General,
         };
 
-        Ok(Self {
+        // Create the agent
+        let agent = Self {
             pr,
             focus,
             github_client,
             llm_router,
             owner,
             repo,
-        })
+        };
+
+        // Validate that we can extract a PR number
+        agent.extract_pr_number()?;
+
+        Ok(agent)
     }
 
     /// Extract PR number from a PR string (number or URL)
@@ -123,16 +146,63 @@ impl Agent for PrAnalyzeAgent {
 
     async fn execute(&self) -> Result<AgentResponse> {
         // Extract PR number
-        let pr_number = self.extract_pr_number()?;
+        let pr_number = match self.extract_pr_number() {
+            Ok(num) => num,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to extract PR number: {}", e),
+                    data: None,
+                });
+            }
+        };
 
         // Get PR information
-        let pr_info = self.github_client.get_pull_request(&self.owner, &self.repo, pr_number).await?;
+        let pr_info = match self.github_client.get_pull_request(&self.owner, &self.repo, pr_number).await {
+            Ok(info) => info,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to get PR information: {}", e),
+                    data: Some(serde_json::json!({
+                        "pr_number": pr_number,
+                        "error": format!("{}", e),
+                    })),
+                });
+            }
+        };
 
         // Get PR diff
-        let diff = self.github_client.get_pull_request_diff(&self.owner, &self.repo, pr_number).await?;
+        let diff = match self.github_client.get_pull_request_diff(&self.owner, &self.repo, pr_number).await {
+            Ok(diff) => diff,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to get PR diff: {}", e),
+                    data: Some(serde_json::json!({
+                        "pr_number": pr_number,
+                        "pr_title": pr_info.title,
+                        "error": format!("{}", e),
+                    })),
+                });
+            }
+        };
 
         // Get PR files
-        let files = self.github_client.get_pull_request_files(&self.owner, &self.repo, pr_number).await?;
+        let files = match self.github_client.get_pull_request_files(&self.owner, &self.repo, pr_number).await {
+            Ok(files) => files,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to get PR files: {}", e),
+                    data: Some(serde_json::json!({
+                        "pr_number": pr_number,
+                        "pr_title": pr_info.title,
+                        "error": format!("{}", e),
+                    })),
+                });
+            }
+        };
 
         // Generate file summary
         let file_summary = files.iter().map(|f| {
@@ -151,12 +221,27 @@ impl Agent for PrAnalyzeAgent {
         );
 
         // Create the LLM request
-        let model = self.llm_router.default_model().unwrap_or_else(|| "tinyllama".to_string());
+        let model = self.llm_router.default_model().unwrap_or_else(|| "mistral".to_string());
         let request = LlmRequest::new(prompt, model)
             .with_system_message(self.focus.system_prompt());
 
         // Send the request to the LLM
-        let response = self.llm_router.send(request, Some("pr-analyze")).await?;
+        let response = match self.llm_router.send(request, Some("pr-analyze")).await {
+            Ok(response) => response,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to get response from LLM: {}", e),
+                    data: Some(serde_json::json!({
+                        "pr_number": pr_number,
+                        "pr_title": pr_info.title,
+                        "focus": format!("{:?}", self.focus),
+                        "files_changed": files.len(),
+                        "error": format!("{}", e),
+                    })),
+                });
+            }
+        };
 
         // Return the response
         Ok(AgentResponse {
@@ -168,6 +253,8 @@ impl Agent for PrAnalyzeAgent {
                 "analysis": response.text,
                 "focus": format!("{:?}", self.focus),
                 "files_changed": files.len(),
+                "model": response.model,
+                "provider": response.provider,
             })),
         })
     }

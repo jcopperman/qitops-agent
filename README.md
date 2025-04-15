@@ -35,17 +35,19 @@ This is more than just a tool — it’s a living expression of the QitOps metho
 ## 🧩 Initial Feature Roadmap
 
 ### ✅ Phase 1: Foundational Agents
-- [ ] Test Case Generator (Markdown / YAML / Robot Framework)
-- [ ] Risk Estimator (PR / diff analysis)
-- [ ] Bug Repro / Severity Analyzer
-- [ ] Test Plan Suggestion Agent
-- [ ] Test Data Generator
+- [x] Test Case Generator (Markdown / YAML / Robot Framework)
+- [x] Risk Estimator (PR / diff analysis)
+- [x] Bug Repro / Severity Analyzer
+- [x] Test Plan Suggestion Agent
+- [x] Test Data Generator
 
 ### 🔌 Phase 2: Integrations & Plugins
-- [ ] GitHub PR integration
-- [ ] CLI utility
-- [ ] Local Ollama / OpenRouter LLM support
-- [ ] p5.js-based session UI for exploratory feedback
+- [x] GitHub PR integration
+- [x] CLI utility
+- [x] Local Ollama / OpenRouter LLM support
+- [x] Interactive chat interface for QitOps Bot
+- [x] Interactive testing sessions
+- [x] Monitoring and metrics collection
 
 ### 🧪 Phase 3: Advanced Use Cases
 - [ ] Historical flakiness detection
@@ -78,29 +80,102 @@ This project is aligned with the values of QitOps:
 
 ## 🚀 Installation & Usage
 
+### Prerequisites
+
+- **Rust**: QitOps Agent is built with Rust. [Install Rust](https://www.rust-lang.org/tools/install) if you don't have it already.
+- **Git**: Required to clone the repository.
+- **LLM Provider**: You'll need access to an LLM provider:
+  - **Ollama** (recommended for local use): [Install Ollama](https://ollama.ai/download)
+  - **OpenAI API Key** (optional): For using OpenAI models
+  - **Anthropic API Key** (optional): For using Claude models
+
 ### Installation
 
-#### Windows
+#### From Source (Recommended)
+
+##### Windows
 
 ```powershell
 # Clone the repository
 git clone https://github.com/jcopperman/qitops-agent.git
 cd qitops-agent
 
-# Run the installation script
-.\install.ps1
+# Build the project
+cargo build --release
+
+# Create a symbolic link (Run as Administrator)
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.cargo\bin\qitops" -Target "$PWD\target\release\qitops-agent.exe"
+
+# Verify installation
+qitops --version
 ```
 
-#### Linux/macOS
+##### Linux/macOS
 
 ```bash
 # Clone the repository
 git clone https://github.com/jcopperman/qitops-agent.git
 cd qitops-agent
 
-# Run the installation script
-chmod +x install.sh
-./install.sh
+# Build the project
+cargo build --release
+
+# Create a symbolic link
+mkdir -p ~/.cargo/bin
+ln -sf "$(pwd)/target/release/qitops-agent" ~/.cargo/bin/qitops
+
+# Add to PATH if not already
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Verify installation
+qitops --version
+```
+
+#### Using Pre-built Binaries
+
+Download the latest release from the [Releases page](https://github.com/jcopperman/qitops-agent/releases).
+
+##### Windows
+
+1. Download the Windows binary (`qitops-windows-amd64.exe`)
+2. Rename it to `qitops.exe`
+3. Move it to a directory in your PATH
+
+##### Linux
+
+```bash
+# Download the latest release
+curl -L https://github.com/jcopperman/qitops-agent/releases/latest/download/qitops-linux-amd64 -o qitops
+
+# Make it executable
+chmod +x qitops
+
+# Move to a directory in your PATH
+sudo mv qitops /usr/local/bin/
+```
+
+##### macOS
+
+```bash
+# Download the latest release
+curl -L https://github.com/jcopperman/qitops-agent/releases/latest/download/qitops-macos-amd64 -o qitops
+
+# Make it executable
+chmod +x qitops
+
+# Move to a directory in your PATH
+sudo mv qitops /usr/local/bin/
+```
+
+#### Using Docker
+
+```bash
+# Pull the Docker image
+docker pull jcopperman/qitops-agent:latest
+
+# Run QitOps Agent in a container
+docker run -it --rm jcopperman/qitops-agent:latest qitops --help
 ```
 
 ### Basic Commands
@@ -122,8 +197,44 @@ qitops run risk --diff changes.diff
 qitops run test-data --schema user-profile --count 100
 
 # Start an interactive testing session
-qitops run session --name "Login Flow Test"
+qitops run session --name "Login Flow Test" --application "MyApp" --session-type exploratory --objectives "verify login,test error handling" --sources "documentation,code" --personas "tester,developer"
 ```
+
+### Interactive Testing Sessions
+
+QitOps Agent provides an interactive testing session feature that allows testers to have a conversation with an AI assistant to guide them through exploratory testing sessions:
+
+```bash
+# Start a basic session
+qitops run session --name "Login Flow Test" --application "MyApp"
+
+# Start a session with a specific type
+qitops run session --name "Security Test" --application "MyApp" --session-type security
+
+# Start a session with objectives, sources, and personas
+qitops run session --name "User Journey Test" --application "MyApp" --session-type user-journey --objectives "verify checkout flow,test payment processing" --sources "documentation,code" --personas "new user,returning customer"
+```
+
+Session history is saved to the `sessions` directory for later reference.
+
+### Monitoring and Metrics
+
+QitOps Agent includes a built-in monitoring system that provides insights into its usage, performance, and resource consumption:
+
+```bash
+# Enable monitoring
+export QITOPS_MONITORING_ENABLED=true
+export QITOPS_MONITORING_HOST=127.0.0.1
+export QITOPS_MONITORING_PORT=9090
+
+# Start the monitoring stack
+docker-compose -f docker-compose-monitoring.yml up -d
+
+# Access the Grafana dashboard
+open http://localhost:3000  # Default credentials: admin/qitops
+```
+
+See [Monitoring Documentation](docs/monitoring.md) for more details.
 
 ### LLM Management
 
@@ -163,6 +274,71 @@ qitops run pr-analyze --pr https://github.com/username/repo/pull/123
 # Assess risk from a GitHub PR
 qitops run risk --diff https://github.com/username/repo/pull/123 --focus security,performance
 ```
+
+### Configuration
+
+QitOps Agent uses a configuration file located at:
+
+- Windows: `%USERPROFILE%\.config\qitops\config.toml`
+- Linux/macOS: `~/.config/qitops/config.toml`
+
+You can also use environment variables to configure QitOps Agent:
+
+```bash
+# LLM configuration
+export OPENAI_API_KEY="your-api-key"
+export ANTHROPIC_API_KEY="your-api-key"
+export OLLAMA_API_BASE="http://localhost:11434"
+
+# GitHub configuration
+export GITHUB_TOKEN="your-github-token"
+export GITHUB_OWNER="your-username"
+export GITHUB_REPO="your-repository"
+
+# QitOps configuration
+export QITOPS_DEFAULT_LLM_PROVIDER="ollama"
+export QITOPS_DEFAULT_LLM_MODEL="mistral"
+export QITOPS_SKIP_UPDATE_CHECK="true"
+```
+
+### Troubleshooting
+
+If you encounter issues with QitOps Agent, try the following:
+
+1. **Run with verbose logging**:
+   ```bash
+   qitops --verbose run test-gen --path src/user/auth.rs
+   ```
+
+2. **Check LLM configuration**:
+   ```bash
+   qitops llm list
+   ```
+
+3. **Test LLM connectivity**:
+   ```bash
+   qitops llm test --provider ollama
+   ```
+
+4. **Check GitHub configuration**:
+   ```bash
+   qitops github status
+   ```
+
+5. **Update to the latest version**:
+   ```bash
+   git pull
+   cargo build --release
+   ```
+
+6. **Reset configuration**:
+   ```bash
+   # Windows
+   Remove-Item -Recurse -Force "$env:USERPROFILE\.config\qitops"
+
+   # Linux/macOS
+   rm -rf ~/.config/qitops
+   ```
 
 ## 🤝 Get Involved
 

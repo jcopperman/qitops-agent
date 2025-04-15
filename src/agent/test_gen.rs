@@ -66,7 +66,7 @@ pub struct TestGenAgent {
 }
 
 impl TestGenAgent {
-    /// Create a new test case generator agent
+    /// Create a new test case generator agent with input validation
     pub async fn new(
         path: String,
         format: &str,
@@ -74,7 +74,41 @@ impl TestGenAgent {
         personas: Option<Vec<String>>,
         llm_router: LlmRouter
     ) -> Result<Self> {
-        let format = TestFormat::from_str(format)?;
+        // Validate the format
+        let format = TestFormat::from_str(format)
+            .context(format!("Invalid test format: '{}'. Supported formats are: markdown, yaml, robot", format))?;
+
+        // Validate the path exists
+        let file_path = Path::new(&path);
+        if !file_path.exists() {
+            return Err(anyhow::anyhow!("File not found: {}", path));
+        }
+
+        // Validate the path is readable
+        match fs::metadata(file_path) {
+            Ok(metadata) => {
+                if metadata.is_dir() {
+                    return Err(anyhow::anyhow!("Path is a directory, not a file: {}", path));
+                }
+            },
+            Err(e) => {
+                return Err(anyhow::anyhow!("Cannot access file metadata for {}: {}", path, e));
+            }
+        }
+
+        // Validate sources if provided
+        if let Some(sources) = &sources {
+            if sources.is_empty() {
+                return Err(anyhow::anyhow!("Sources list is empty. Either provide valid sources or omit the parameter."));
+            }
+        }
+
+        // Validate personas if provided
+        if let Some(personas) = &personas {
+            if personas.is_empty() {
+                return Err(anyhow::anyhow!("Personas list is empty. Either provide valid personas or omit the parameter."));
+            }
+        }
 
         Ok(Self {
             path,
@@ -92,7 +126,24 @@ impl TestGenAgent {
             return Err(anyhow::anyhow!("File not found: {}", self.path));
         }
 
-        fs::read_to_string(path).context(format!("Failed to read file: {}", self.path))
+        // Try to read the file with better error handling
+        match fs::read_to_string(path) {
+            Ok(content) => Ok(content),
+            Err(e) => {
+                // Provide more specific error messages based on the error kind
+                match e.kind() {
+                    std::io::ErrorKind::PermissionDenied => {
+                        Err(anyhow::anyhow!("Permission denied when reading file: {}. Try running with administrator privileges or check file permissions.", self.path))
+                    },
+                    std::io::ErrorKind::NotFound => {
+                        Err(anyhow::anyhow!("File not found: {}", self.path))
+                    },
+                    _ => {
+                        Err(anyhow::anyhow!("Failed to read file: {}. Error: {}", self.path, e))
+                    }
+                }
+            }
+        }
     }
 
     /// Generate the prompt for the LLM
@@ -161,21 +212,59 @@ impl Agent for TestGenAgent {
 
     async fn execute(&self) -> Result<AgentResponse> {
         // Read the source code
-        let source_code = self.read_source_code()?;
+        let source_code = match self.read_source_code() {
+            Ok(code) => code,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to read source code: {}", e),
+                    data: None,
+                });
+            }
+        };
 
         // Generate the prompt
-        let prompt = self.generate_prompt(&source_code).await?;
+        let prompt = match self.generate_prompt(&source_code).await {
+            Ok(prompt) => prompt,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to generate prompt: {}", e),
+                    data: None,
+                });
+            }
+        };
 
         // Create the LLM request
-        let model = self.llm_router.default_model().unwrap_or_else(|| "tinyllama".to_string());
+        let model = self.llm_router.default_model().unwrap_or_else(|| "mistral".to_string());
         let request = LlmRequest::new(prompt, model)
             .with_system_message(self.format.system_prompt());
 
         // Send the request to the LLM
-        let response = self.llm_router.send(request, Some("test-gen")).await?;
+        let response = match self.llm_router.send(request, Some("test-gen")).await {
+            Ok(response) => response,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to get response from LLM: {}", e),
+                    data: None,
+                });
+            }
+        };
 
         // Save the test cases to a file
-        let output_file = self.save_test_cases(&response.text)?;
+        let output_file = match self.save_test_cases(&response.text) {
+            Ok(file) => file,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to save test cases: {}", e),
+                    data: Some(serde_json::json!({
+                        "test_cases": response.text,
+                    })),
+                });
+            }
+        };
 
         // Return the response
         Ok(AgentResponse {
@@ -184,6 +273,9 @@ impl Agent for TestGenAgent {
             data: Some(serde_json::json!({
                 "output_file": output_file,
                 "test_cases": response.text,
+                "model": response.model,
+                "provider": response.provider,
+                "format": format!("{:?}", self.format),
             })),
         })
     }

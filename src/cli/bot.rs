@@ -16,6 +16,7 @@ pub struct BotConfig {
     pub knowledge_base_path: Option<PathBuf>,
 
     /// Max history length
+    #[allow(dead_code)]
     pub max_history_length: usize,
 }
 
@@ -168,6 +169,7 @@ impl QitOpsBot {
     }
 
     /// Execute a QitOps Agent command
+    #[allow(dead_code)]
     pub async fn execute_command(&self, command: &str) -> Result<String> {
         // Parse the command
         let args = shlex::split(command).ok_or_else(|| anyhow::anyhow!("Failed to parse command"))?;

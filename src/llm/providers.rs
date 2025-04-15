@@ -2,7 +2,6 @@ use anyhow::{Result, Context, anyhow};
 use async_trait::async_trait;
 use reqwest::Client as HttpClient;
 use serde_json::json;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::llm::client::{LlmClient, LlmRequest, LlmResponse, MessageRole, ProviderConfig};
 

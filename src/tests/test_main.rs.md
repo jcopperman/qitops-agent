@@ -1,0 +1,7 @@
+ This code seems to be a part of a CLI tool written in Rust using the `anyhow` and `indicatif` crates for error handling and progress indicators respectively. The main functionality appears to be handling commands related to monitoring, such as starting, stopping, and checking the status of a Docker monitoring stack (presumably for some kind of system monitoring dashboard).
+
+The code includes functions to handle errors using the `anyhow` crate, which allows for structured error messages. The `indicatif` crate is used to display progress indicators during long-running tasks like starting or stopping the Docker monitoring stack.
+
+Additionally, it looks like there's a function to handle commands with arguments such as `--docker`, which may enable or disable the use of Docker when running certain commands. The code also includes functions for displaying success and error messages using the `println!` macro and the `colorful` crate (not shown in this excerpt).
+
+Overall, it appears that this code is part of a CLI tool for managing the deployment and monitoring of some kind of system dashboard. However, without more context, it's difficult to say exactly what this tool does or how it's intended to be used.

@@ -1,7 +1,6 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use std::collections::HashMap;
 use regex::Regex;
 use base64::Engine;
 use crate::ci::config::GitHubConfig;
@@ -184,9 +183,19 @@ impl GitHubClient {
 
     /// Create a new GitHub client from config
     pub fn from_config(config: &GitHubConfig) -> Result<Self> {
-        let token = config.token.clone()
-            .or_else(|| std::env::var("GITHUB_TOKEN").ok())
-            .ok_or_else(|| anyhow!("GitHub token not found in config or GITHUB_TOKEN environment variable"))?;
+        // Try to get token from config, then environment variable
+        let token = match (config.token.clone(), std::env::var("GITHUB_TOKEN").ok()) {
+            (Some(token), _) if !token.trim().is_empty() => token,
+            (_, Some(token)) if !token.trim().is_empty() => token,
+            _ => {
+                return Err(anyhow!(
+                    "GitHub token not found in config or GITHUB_TOKEN environment variable. \n\n\
+                    To configure GitHub token, run: \n\
+                    qitops github config --token <YOUR_GITHUB_TOKEN> \n\n\
+                    Or set the GITHUB_TOKEN environment variable."
+                ));
+            }
+        };
 
         let base_url = config.api_base.clone().unwrap_or_else(|| "https://api.github.com".to_string());
 

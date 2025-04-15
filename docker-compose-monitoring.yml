@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=qitops
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./logs:/var/log
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  qitops-agent:
+    build: .
+    image: qitops-agent:latest
+    container_name: qitops-agent
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://ollama:11434}
+      - QITOPS_DEFAULT_LLM_PROVIDER=${QITOPS_DEFAULT_LLM_PROVIDER:-ollama}
+      - QITOPS_DEFAULT_LLM_MODEL=${QITOPS_DEFAULT_LLM_MODEL:-mistral}
+      - QITOPS_MONITORING_ENABLED=true
+      - QITOPS_MONITORING_HOST=0.0.0.0
+      - QITOPS_MONITORING_PORT=9091
+      - QITOPS_MONITORING_INTERVAL=15
+    volumes:
+      - ./config:/root/.config/qitops
+      - ./output:/app/output
+    ports:
+      - "9091:9091"
+    networks:
+      - monitoring
+    depends_on:
+      - ollama
+      - prometheus
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+networks:
+  monitoring:
+
+volumes:
+  grafana-storage:
+  ollama-data:

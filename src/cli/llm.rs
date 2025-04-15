@@ -3,7 +3,7 @@ use clap::{Args, Subcommand};
 use std::collections::HashMap;
 use colored::Colorize;
 
-use crate::llm::{ConfigManager, ProviderConfig, LlmRequest, LlmRouter, CacheConfig};
+use crate::llm::{ConfigManager, ProviderConfig, LlmRequest, LlmRouter};
 use crate::cli::branding;
 use crate::cli::progress::ProgressIndicator;
 
@@ -459,8 +459,48 @@ async fn show_cache_status() -> Result<()> {
     // Try to initialize the cache to check if it's working
     if config.cache.enabled {
         match crate::llm::cache::ResponseCache::new(config.cache.ttl_seconds, config.cache.use_disk) {
-            Ok(_) => {
+            Ok(mut cache) => {
                 println!("\nCache status: {}", "working".bright_green());
+
+                // Show cache metrics
+                let metrics = cache.get_metrics().clone(); // Clone the metrics to avoid borrowing issues
+
+                branding::print_section("Cache Metrics");
+                println!("Hits: {}", metrics.hits.to_string().bright_green());
+                println!("Misses: {}", metrics.misses.to_string().bright_yellow());
+                println!("Hit ratio: {:.1}%", if metrics.hits + metrics.misses > 0 {
+                    metrics.hits as f64 / (metrics.hits + metrics.misses) as f64 * 100.0
+                } else {
+                    0.0
+                });
+                println!("Entries: {}", metrics.entries.to_string().bright_cyan());
+                println!("Total size: {} KB", (metrics.total_size_bytes / 1024).to_string().bright_cyan());
+                println!("Expired entries removed: {}", metrics.expired_removed.to_string().bright_yellow());
+
+                // Show cache age
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+
+                let cache_age = now.saturating_sub(metrics.created_at);
+                let last_access_age = now.saturating_sub(metrics.last_access);
+
+                println!("Cache age: {} seconds", cache_age.to_string().bright_cyan());
+                println!("Last access: {} seconds ago", last_access_age.to_string().bright_cyan());
+
+                // Clean expired entries
+                println!("\nCleaning expired entries...");
+                match cache.clean_expired() {
+                    Ok(_) => {
+                        let metrics_after = cache.get_metrics();
+                        let removed = metrics.entries.saturating_sub(metrics_after.entries);
+                        println!("Removed {} expired entries", removed.to_string().bright_yellow());
+                    },
+                    Err(e) => {
+                        println!("Error cleaning expired entries: {}", e);
+                    }
+                }
             },
             Err(e) => {
                 println!("\nCache status: {}", "error".bright_red());
