@@ -2,101 +2,8 @@ use anyhow::Result;
 use clap::Subcommand;
 use std::path::PathBuf;
 
-// Define the Source, SourceType, and SourceManager here
-#[derive(Debug, Clone)]
-pub enum SourceType {
-    Requirements,
-    Standard,
-    Documentation,
-    Custom(String),
-}
-
-impl SourceType {
-    pub fn from_str(s: &str) -> Result<Self> {
-        match s.to_lowercase().as_str() {
-            "requirements" => Ok(SourceType::Requirements),
-            "standard" => Ok(SourceType::Standard),
-            "documentation" => Ok(SourceType::Documentation),
-            _ => Ok(SourceType::Custom(s.to_string())),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        match self {
-            SourceType::Requirements => "requirements".to_string(),
-            SourceType::Standard => "standard".to_string(),
-            SourceType::Documentation => "documentation".to_string(),
-            SourceType::Custom(s) => s.clone(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Source {
-    pub id: String,
-    pub source_type: SourceType,
-    pub path: PathBuf,
-    pub description: Option<String>,
-}
-
-impl Source {
-    pub fn new(id: String, source_type: SourceType, path: PathBuf, description: Option<String>) -> Self {
-        Self {
-            id,
-            source_type,
-            path,
-            description,
-        }
-    }
-
-    pub fn get_content(&self) -> Result<String> {
-        Ok(std::fs::read_to_string(&self.path)?)
-    }
-}
-
-pub struct SourceManager {
-    sources: std::collections::HashMap<String, Source>,
-}
-
-impl SourceManager {
-    pub fn new() -> Result<Self> {
-        Ok(Self {
-            sources: std::collections::HashMap::new(),
-        })
-    }
-
-    pub fn add_source(&mut self, source: Source) -> Result<()> {
-        self.sources.insert(source.id.clone(), source);
-        Ok(())
-    }
-
-    pub fn remove_source(&mut self, id: &str) -> Result<()> {
-        self.sources.remove(id);
-        Ok(())
-    }
-
-    pub fn get_source(&self, id: &str) -> Option<&Source> {
-        self.sources.get(id)
-    }
-
-    pub fn list_sources(&self) -> Vec<&Source> {
-        self.sources.values().collect()
-    }
-
-    pub fn get_content_for_sources(&self, sources: &[String]) -> Result<String> {
-        let mut content = String::new();
-
-        for source_id in sources {
-            if let Some(source) = self.get_source(source_id) {
-                content.push_str(&format!("# Source: {} ({})\n\n", source_id, source.source_type.to_string()));
-                content.push_str(&source.get_content()?);
-                content.push_str("\n\n");
-            }
-        }
-
-        Ok(content)
-    }
-}
+// Use the Source and SourceManager from the source module
+use crate::source::{Source, SourceType, SourceManager};
 use crate::cli::branding;
 
 /// Source CLI arguments
@@ -149,6 +56,22 @@ pub enum SourceCommand {
         #[clap(short, long)]
         id: String,
     },
+
+    /// Add metadata to a source
+    #[clap(name = "add-metadata")]
+    AddMetadata {
+        /// Source ID
+        #[clap(short, long)]
+        id: String,
+
+        /// Metadata key
+        #[clap(short, long)]
+        key: String,
+
+        /// Metadata value
+        #[clap(short, long)]
+        value: String,
+    },
 }
 
 /// Handle source commands
@@ -166,6 +89,9 @@ pub async fn handle_source_command(args: &SourceArgs) -> Result<()> {
         SourceCommand::Show { id } => {
             show_source(id).await
         },
+        SourceCommand::AddMetadata { id, key, value } => {
+            add_metadata(id, key, value).await
+        },
     }
 }
 
@@ -173,8 +99,13 @@ pub async fn handle_source_command(args: &SourceArgs) -> Result<()> {
 async fn add_source(id: &str, type_: &str, path: &str, description: Option<String>) -> Result<()> {
     let mut source_manager = SourceManager::new()?;
 
-    let source_type = SourceType::from_str(type_)?;
+    let source_type = type_.parse::<SourceType>()?;
     let source_path = PathBuf::from(path);
+
+    // Validate that the path exists
+    if !source_path.exists() {
+        return Err(anyhow::anyhow!("Source path does not exist: {}", path));
+    }
 
     let source = Source::new(
         id.to_string(),
@@ -202,14 +133,25 @@ async fn list_sources() -> Result<()> {
     }
 
     println!("Sources:");
+    println!("{:-<60}", "");
+
     for source in sources {
-        println!("  ID: {}", source.id);
-        println!("    Type: {}", source.source_type.to_string());
-        println!("    Path: {}", source.path.display());
+        println!("ID: {}", source.id);
+        println!("Type: {}", source.source_type);
+        println!("Path: {}", source.path.display());
         if let Some(description) = &source.description {
-            println!("    Description: {}", description);
+            println!("Description: {}", description);
         }
-        println!();
+
+        // Show metadata if available
+        if !source.metadata.is_empty() {
+            println!("Metadata:");
+            for (key, value) in &source.metadata {
+                println!("  {}: {}", key, value);
+            }
+        }
+
+        println!("{:-<60}", "");
     }
 
     Ok(())
@@ -235,13 +177,46 @@ async fn show_source(id: &str) -> Result<()> {
 
     let content = source.get_content()?;
 
-    println!("Source: {} ({})", source.id, source.source_type.to_string());
+    println!("{:-<60}", "");
+    println!("Source: {} ({})", source.id, source.source_type);
     if let Some(description) = &source.description {
         println!("Description: {}", description);
     }
     println!("Path: {}", source.path.display());
+
+    // Show metadata if available
+    if !source.metadata.is_empty() {
+        println!("Metadata:");
+        for (key, value) in &source.metadata {
+            println!("  {}: {}", key, value);
+        }
+    }
+
+    println!("{:-<60}", "");
     println!();
     println!("{}", content);
+
+    Ok(())
+}
+
+/// Add metadata to a source
+async fn add_metadata(id: &str, key: &str, value: &str) -> Result<()> {
+    let mut source_manager = SourceManager::new()?;
+
+    // Get the source
+    let source = source_manager.get_source(id)
+        .ok_or_else(|| anyhow::anyhow!("Source not found: {}", id))?;
+
+    // Clone the source to modify it
+    let mut source_clone = source.clone();
+
+    // Add metadata
+    source_clone.add_metadata(key.to_string(), value.to_string());
+
+    // Update the source in the manager
+    source_manager.add_source(source_clone)?;
+
+    branding::print_success(&format!("Added metadata '{}={}' to source '{}'", key, value, id));
 
     Ok(())
 }

@@ -1,13 +1,13 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use std::collections::HashMap;
 use regex::Regex;
 use base64::Engine;
 use crate::ci::config::GitHubConfig;
 
 /// GitHub API error
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum GitHubError {
     /// API error
     #[error("API error: {0}")]
@@ -174,6 +174,7 @@ pub struct GitHubClient {
 
 impl GitHubClient {
     /// Create a new GitHub client
+    #[allow(dead_code)]
     pub fn new(token: String) -> Self {
         Self {
             token,
@@ -184,9 +185,19 @@ impl GitHubClient {
 
     /// Create a new GitHub client from config
     pub fn from_config(config: &GitHubConfig) -> Result<Self> {
-        let token = config.token.clone()
-            .or_else(|| std::env::var("GITHUB_TOKEN").ok())
-            .ok_or_else(|| anyhow!("GitHub token not found in config or GITHUB_TOKEN environment variable"))?;
+        // Try to get token from config, then environment variable
+        let token = match (config.token.clone(), std::env::var("GITHUB_TOKEN").ok()) {
+            (Some(token), _) if !token.trim().is_empty() => token,
+            (_, Some(token)) if !token.trim().is_empty() => token,
+            _ => {
+                return Err(anyhow!(
+                    "GitHub token not found in config or GITHUB_TOKEN environment variable. \n\n\
+                    To configure GitHub token, run: \n\
+                    qitops github config --token <YOUR_GITHUB_TOKEN> \n\n\
+                    Or set the GITHUB_TOKEN environment variable."
+                ));
+            }
+        };
 
         let base_url = config.api_base.clone().unwrap_or_else(|| "https://api.github.com".to_string());
 
@@ -369,6 +380,7 @@ impl GitHubClient {
     }
 
     /// Get pull request comments
+    #[allow(dead_code)]
     pub async fn get_pull_request_comments(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<PullRequestComment>> {
         let url = format!("{}/repos/{}/{}/pulls/{}/comments", self.base_url, owner, repo, number);
 
@@ -508,6 +520,7 @@ impl GitHubClient {
     }
 
     /// Get file content from a repository
+    #[allow(dead_code)]
     pub async fn get_file_content(&self, owner: &str, repo: &str, path: &str, branch: Option<&str>) -> Result<String> {
         let branch_param = branch.map(|b| format!("?ref={}", b)).unwrap_or_default();
         let url = format!("{}/repos/{}/{}/contents/{}{}",
@@ -554,6 +567,7 @@ impl GitHubClient {
     }
 
     /// Create a comment on a pull request
+    #[allow(dead_code)]
     pub async fn create_pull_request_comment(&self, owner: &str, repo: &str, number: u64, body: &str) -> Result<PullRequestComment> {
         let url = format!("{}/repos/{}/{}/issues/{}/comments", self.base_url, owner, repo, number);
 

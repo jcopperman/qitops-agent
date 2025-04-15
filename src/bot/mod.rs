@@ -2,10 +2,12 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::fs;
 
 pub mod knowledge;
 use knowledge::KnowledgeBase;
+
+pub mod tutorial;
+use tutorial::{TutorialManager, TutorialSession};
 
 use crate::llm::{LlmRouter, LlmRequest};
 use crate::cli::branding;
@@ -18,6 +20,9 @@ pub enum ChatMessage {
 
     /// Bot message
     Bot(String),
+
+    /// System message
+    System(String),
 }
 
 /// Bot configuration
@@ -29,8 +34,14 @@ pub struct BotConfig {
     /// Knowledge base path
     pub knowledge_base_path: Option<PathBuf>,
 
+    /// Tutorial path
+    pub tutorial_path: Option<PathBuf>,
+
     /// Max history length
     pub max_history_length: usize,
+
+    /// Show onboarding tutorial for first-time users
+    pub show_onboarding: bool,
 }
 
 impl Default for BotConfig {
@@ -38,7 +49,9 @@ impl Default for BotConfig {
         Self {
             system_prompt: DEFAULT_SYSTEM_PROMPT.to_string(),
             knowledge_base_path: None,
+            tutorial_path: Some(PathBuf::from("tutorials")),
             max_history_length: 10,
+            show_onboarding: true,
         }
     }
 }
@@ -79,6 +92,15 @@ pub struct QitOpsBot {
 
     /// Knowledge base
     knowledge_base: Option<KnowledgeBase>,
+
+    /// Tutorial manager
+    tutorial_manager: Option<TutorialManager>,
+
+    /// Active tutorial session
+    active_tutorial: Option<TutorialSession>,
+
+    /// First-time user flag
+    is_first_time_user: bool,
 }
 
 impl QitOpsBot {
@@ -102,11 +124,30 @@ impl QitOpsBot {
             None
         };
 
+        // Initialize tutorial manager
+        let tutorial_dir = PathBuf::from("tutorials");
+        let tutorial_manager = match TutorialManager::new(tutorial_dir) {
+            Ok(manager) => {
+                tracing::info!("Initialized tutorial manager");
+                Some(manager)
+            },
+            Err(e) => {
+                tracing::warn!("Failed to initialize tutorial manager: {}", e);
+                None
+            }
+        };
+
+        // Check if this is a first-time user
+        let is_first_time_user = !PathBuf::from("chat_sessions").exists();
+
         Self {
             llm_router,
             chat_history: Vec::new(),
             config,
             knowledge_base,
+            tutorial_manager,
+            active_tutorial: None,
+            is_first_time_user,
         }
     }
 
@@ -121,6 +162,35 @@ impl QitOpsBot {
         let initial_message = "Hello! I'm the QitOps Bot. How can I help you with QitOps Agent today?";
         println!("{}: {}", branding::colorize("QitOps Bot", branding::Color::Green), initial_message);
         self.chat_history.push(ChatMessage::Bot(initial_message.to_string()));
+
+        // Show help message
+        let help_message = "Type !help to see available commands.";
+        println!("{}", help_message);
+        self.chat_history.push(ChatMessage::System(help_message.to_string()));
+
+        // Offer onboarding tutorial to first-time users
+        if self.is_first_time_user {
+            println!();
+            let onboarding_message = "It looks like this is your first time using QitOps Bot. Would you like to take a quick onboarding tutorial to learn the basics? (yes/no)";
+            println!("{}: {}", branding::colorize("QitOps Bot", branding::Color::Green), onboarding_message);
+            self.chat_history.push(ChatMessage::Bot(onboarding_message.to_string()));
+
+            // Get user response
+            print!("{}: ", branding::colorize("You", branding::Color::Blue));
+            io::stdout().flush()?;
+
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            let input = input.trim().to_lowercase();
+
+            if input == "yes" || input == "y" {
+                // Start onboarding tutorial
+                self.start_tutorial("onboarding").await?;
+            } else {
+                println!("{}: No problem! You can always start a tutorial later by typing !tutorial",
+                    branding::colorize("QitOps Bot", branding::Color::Green));
+            }
+        }
 
         // Chat loop
         loop {
@@ -161,6 +231,77 @@ impl QitOpsBot {
             self.chat_history = self.chat_history[new_start..].to_vec();
         }
 
+        // Check if there's an active tutorial and process tutorial navigation commands
+        if self.active_tutorial.is_some() {
+            // Tutorial navigation commands
+            if message == "!next" {
+                if let Err(e) = self.next_tutorial_step() {
+                    return Ok(format!("Error: {}", e));
+                }
+                return Ok("Moving to the next step.".to_string());
+            } else if message == "!prev" {
+                if let Err(e) = self.previous_tutorial_step() {
+                    return Ok(format!("Error: {}", e));
+                }
+                return Ok("Moving to the previous step.".to_string());
+            } else if message == "!exit-tutorial" {
+                if let Err(e) = self.exit_tutorial() {
+                    return Ok(format!("Error: {}", e));
+                }
+                return Ok("Tutorial exited.".to_string());
+            }
+
+            // Check if the message matches the expected action in the current tutorial step
+            if let Some(session) = &self.active_tutorial {
+                if let Some(step) = session.current_step() {
+                    if let Some(expected_action) = &step.example {
+                        if message.trim() == expected_action.trim() {
+                            // User entered the expected command, execute it
+                            let result = self.execute_command(message).await?;
+                            let response = format!("I executed the command: `{}`\n\nResult:\n```\n{}\n```\n\nGreat job! Type !next to continue to the next step.", message, result);
+
+                            // Add bot response to chat history
+                            self.chat_history.push(ChatMessage::Bot(response.clone()));
+
+                            return Ok(response);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check if the message is a help request
+        if message == "!help" {
+            let help_text = self.get_help_text();
+            self.chat_history.push(ChatMessage::System(help_text.clone()));
+            return Ok(help_text);
+        }
+
+        // Check if the message is a tutorial command
+        if message == "!tutorial" {
+            match self.list_tutorials() {
+                Ok(tutorials) => {
+                    self.chat_history.push(ChatMessage::System(tutorials.clone()));
+                    return Ok(tutorials);
+                }
+                Err(e) => {
+                    let error = format!("Error listing tutorials: {}", e);
+                    self.chat_history.push(ChatMessage::System(error.clone()));
+                    return Ok(error);
+                }
+            }
+        } else if message.starts_with("!tutorial ") {
+            let tutorial_id = message.trim_start_matches("!tutorial ").trim();
+            match self.start_tutorial(tutorial_id).await {
+                Ok(_) => return Ok(format!("Started tutorial: {}", tutorial_id)),
+                Err(e) => {
+                    let error = format!("Error starting tutorial: {}", e);
+                    self.chat_history.push(ChatMessage::System(error.clone()));
+                    return Ok(error);
+                }
+            }
+        }
+
         // Check if the message is a command execution request
         if message.starts_with("!exec ") {
             let command = message.trim_start_matches("!exec ").trim();
@@ -198,7 +339,7 @@ impl QitOpsBot {
                     for (option, desc) in &cmd_doc.options {
                         kb_info.push_str(&format!("- {}: {}\n", option, desc));
                     }
-                    kb_info.push_str("\n");
+                    kb_info.push('\n');
                 }
             }
 
@@ -254,6 +395,9 @@ impl QitOpsBot {
                 ChatMessage::Bot(text) => {
                     prompt.push_str(&format!("QitOps Bot: {}\n", text));
                 },
+                ChatMessage::System(text) => {
+                    prompt.push_str(&format!("System: {}\n", text));
+                },
             }
         }
 
@@ -281,5 +425,143 @@ impl QitOpsBot {
         } else {
             Ok(format!("Command output:\n{}", stdout))
         }
+    }
+
+    /// Start a tutorial
+    pub async fn start_tutorial(&mut self, tutorial_id: &str) -> Result<()> {
+        // Check if tutorial manager is available
+        let tutorial_manager = match &self.tutorial_manager {
+            Some(manager) => manager,
+            None => return Err(anyhow!("Tutorial manager not available")),
+        };
+
+        // Get the tutorial
+        let tutorial = match tutorial_manager.get_tutorial(tutorial_id) {
+            Some(tutorial) => tutorial.clone(),
+            None => return Err(anyhow!("Tutorial not found: {}", tutorial_id)),
+        };
+
+        // Create a new tutorial session
+        let session = TutorialSession::new(tutorial);
+        self.active_tutorial = Some(session);
+
+        // Show the first step
+        self.show_current_tutorial_step()
+    }
+
+    /// Show the current tutorial step
+    pub fn show_current_tutorial_step(&self) -> Result<()> {
+        // Check if there's an active tutorial
+        let session = match &self.active_tutorial {
+            Some(session) => session,
+            None => return Err(anyhow!("No active tutorial")),
+        };
+
+        // Format and print the current step
+        let step_text = session.format_current_step();
+        println!("{}: {}\n", branding::colorize("Tutorial", branding::Color::Cyan), step_text);
+
+        Ok(())
+    }
+
+    /// Move to the next tutorial step
+    pub fn next_tutorial_step(&mut self) -> Result<()> {
+        // Check if there's an active tutorial
+        let session = match &mut self.active_tutorial {
+            Some(session) => session,
+            None => return Err(anyhow!("No active tutorial")),
+        };
+
+        // Move to the next step
+        if session.next_step().is_none() {
+            // Tutorial completed
+            println!("{}: {}\n",
+                branding::colorize("Tutorial", branding::Color::Cyan),
+                "Congratulations! You've completed the tutorial.");
+
+            // Clear the active tutorial
+            self.active_tutorial = None;
+
+            return Ok(());
+        }
+
+        // Show the current step
+        self.show_current_tutorial_step()
+    }
+
+    /// Move to the previous tutorial step
+    pub fn previous_tutorial_step(&mut self) -> Result<()> {
+        // Check if there's an active tutorial
+        let session = match &mut self.active_tutorial {
+            Some(session) => session,
+            None => return Err(anyhow!("No active tutorial")),
+        };
+
+        // Move to the previous step
+        session.previous_step();
+
+        // Show the current step
+        self.show_current_tutorial_step()
+    }
+
+    /// Exit the current tutorial
+    pub fn exit_tutorial(&mut self) -> Result<()> {
+        // Check if there's an active tutorial
+        if self.active_tutorial.is_none() {
+            return Err(anyhow!("No active tutorial"));
+        }
+
+        // Clear the active tutorial
+        self.active_tutorial = None;
+
+        println!("{}: {}\n",
+            branding::colorize("Tutorial", branding::Color::Cyan),
+            "Tutorial exited. You can start another tutorial by typing !tutorial");
+
+        Ok(())
+    }
+
+    /// List available tutorials
+    pub fn list_tutorials(&self) -> Result<String> {
+        // Check if tutorial manager is available
+        let tutorial_manager = match &self.tutorial_manager {
+            Some(manager) => manager,
+            None => return Err(anyhow!("Tutorial manager not available")),
+        };
+
+        // Get all tutorials
+        let tutorials = tutorial_manager.get_all_tutorials();
+
+        if tutorials.is_empty() {
+            return Ok("No tutorials available.".to_string());
+        }
+
+        // Format the tutorial list
+        let mut result = String::new();
+        result.push_str("Available Tutorials:\n\n");
+        result.push_str(&tutorial_manager.format_tutorial_list(tutorials));
+        result.push_str("\nTo start a tutorial, type !tutorial <id>\n");
+
+        Ok(result)
+    }
+
+    /// Get help text
+    pub fn get_help_text(&self) -> String {
+        let mut help = String::new();
+        help.push_str("QitOps Bot Commands:\n\n");
+        help.push_str("!help - Show this help message\n");
+        help.push_str("!exec <command> - Execute a QitOps Agent command\n");
+        help.push_str("!tutorial - List available tutorials\n");
+        help.push_str("!tutorial <id> - Start a specific tutorial\n");
+        help.push_str("!next - Move to the next tutorial step\n");
+        help.push_str("!prev - Move to the previous tutorial step\n");
+        help.push_str("!exit-tutorial - Exit the current tutorial\n");
+
+        help.push_str("\nYou can also use natural language to execute commands. For example:\n");
+        help.push_str("- 'Generate test cases for src/main.rs'\n");
+        help.push_str("- 'Analyze pull request 123'\n");
+        help.push_str("- 'Assess risk for changes.diff'\n");
+
+        help
     }
 }

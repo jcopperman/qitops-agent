@@ -1,0 +1,46 @@
+ {
+      "schema": [
+         {
+            "name": "id",
+            "type": "integer",
+            "isPrimaryKey": true,
+            "autoIncrement": true
+         },
+         {
+            "name": "firstName",
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+         },
+         {
+            "name": "lastName",
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+         },
+         {
+            "name": "email",
+            "type": "string",
+            "format": "email"
+         },
+         {
+            "name": "dateOfBirth",
+            "type": "date"
+         },
+         {
+            "name": "gender",
+            "type": "string",
+            "enumValues": ["Male", "Female", "Other"]
+         }
+      ],
+      "data": [
+         {
+            "id": 0,
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "johndoe@example.com",
+            "dateOfBirth": "1985-05-01",
+            "gender": "Male"
+         }
+      ]
+   }

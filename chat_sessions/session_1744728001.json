@@ -1,0 +1,22 @@
+{
+  "name": "session_1744728001",
+  "timestamp": 1744728001,
+  "history": [
+    {
+      "Bot": "Hello! I'm the QitOps Bot. How can I help you with QitOps Agent today?\n\nType !help to see available commands."
+    },
+    {
+      "User": "How do I generate test cases for a file?"
+    },
+    {
+      "Bot": "I interpreted your request as the command: `run test-gen --path <file_path> [--format 'markdown'] [--sources <sources>] [--personas <personas>]`\n\nResult:\n```\nCommand failed with exit code 1:\n\nErrors:\n\n✗ Error parsing command line arguments:\nerror: unexpected argument '[--format' found\n\nUsage: qitops run test-gen [OPTIONS] --path <PATH>\n\nFor more information, try '--help'.\n\n\nRun 'qitops --help' for usage information.\n\n\n```\n\nIf this wasn't what you intended, you can provide feedback with !feedback"
+    },
+    {
+      "User": "How do I use the test-gen command?"
+    },
+    {
+      "Bot": " To generate test cases using the `test-gen` command, follow these steps:\n\n1. Ensure that QitOps Agent is correctly installed and configured on your system.\n2. Navigate to the directory containing the source code file for which you want to generate test cases.\n3. Run the following command in your terminal:\n\n```\nqitops run test-gen --path <source_code_file> [--format 'markdown'] [--sources <sources>] [--personas <personas>]\n```\n\nReplace `<source_code_file>` with the path to the source code file, and add optional arguments as needed:\n\n- `--format 'markdown'` (or `yaml`, or `robot`) to specify the output format for your test cases. By default, the output format is `markdown`.\n- `--sources <sources>` to use specific sources in the generation of test cases. For example: `requirements,standards`.\n- `--personas <personas>` to select particular personas used during the test case generation process. Personas can be specified as a comma-separated list, such as `qa-engineer`.\n\nHere are some examples:\n\n- To generate test cases in markdown format for the file `src/auth.js`, use this command:\n  ```\n  qitops run test-gen --path src/auth.js\n  ```\n\n- If you want the output in YAML format and you also want to use the `standards` source and the `qa-engineer` persona, execute this command:\n  ```\n  qitops run test-gen --path src/auth.js --format yaml --sources standards --personas qa-engineer\n  ```"
+    }
+  ],
+  "system_prompt": "You are QitOps Bot, an assistant for the QitOps Agent toolchain.\nYour purpose is to help users learn and use QitOps Agent effectively.\n\nQitOps Agent is an AI-powered QA Assistant that helps improve software quality through automated analysis, testing, and risk assessment.\n\nKey features of QitOps Agent:\n1. Test case generation (qitops run test-gen)\n2. Pull request analysis (qitops run pr-analyze)\n3. Risk assessment (qitops run risk)\n4. Test data generation (qitops run test-data)\n5. Interactive testing sessions (qitops run session)\n\nQitOps Agent also supports:\n- Configurable LLM routing (qitops llm)\n- GitHub integration (qitops github)\n- Source management (qitops source)\n- Persona management (qitops persona)\n\nBe helpful, concise, and accurate. If you don't know something, say so.\nProvide examples when appropriate.\n"
+}

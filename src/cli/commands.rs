@@ -50,6 +50,22 @@ pub enum Command {
     #[clap(name = "bot", about = "Interactive assistant for QitOps Agent")]
     Bot(BotArgs),
 
+    /// Monitoring commands
+    #[clap(name = "monitoring", about = "Monitoring and metrics for QitOps Agent")]
+    Monitoring {
+        /// Monitoring subcommand
+        #[clap(subcommand)]
+        command: MonitoringCommand,
+    },
+
+    /// Plugin management
+    #[clap(name = "plugin", about = "Manage plugins for QitOps Agent")]
+    Plugin {
+        /// Plugin subcommand
+        #[clap(subcommand)]
+        command: PluginCommand,
+    },
+
     /// Show version information
     #[clap(name = "version")]
     Version,
@@ -145,6 +161,18 @@ pub enum RunCommand {
         #[clap(short, long)]
         name: String,
 
+        /// Application under test
+        #[clap(short, long)]
+        application: Option<String>,
+
+        /// Session type (exploratory, regression, user-journey, performance, security)
+        #[clap(short, long)]
+        session_type: Option<String>,
+
+        /// Test objectives (comma-separated)
+        #[clap(short, long)]
+        objectives: Option<String>,
+
         /// Sources to use (comma-separated)
         #[clap(long)]
         sources: Option<String>,
@@ -153,4 +181,76 @@ pub enum RunCommand {
         #[clap(long)]
         personas: Option<String>,
     },
+}
+
+/// Monitoring commands
+#[derive(Debug, Subcommand)]
+pub enum MonitoringCommand {
+    /// Start the monitoring server
+    #[clap(name = "start")]
+    Start {
+        /// Host to bind the server to
+        #[clap(long, default_value = "127.0.0.1")]
+        host: String,
+
+        /// Port to bind the server to
+        #[clap(long, default_value = "9090")]
+        port: u16,
+
+        /// Start Docker monitoring stack
+        #[clap(long)]
+        docker: bool,
+    },
+
+    /// Stop the monitoring server
+    #[clap(name = "stop")]
+    Stop {
+        /// Stop Docker monitoring stack
+        #[clap(long)]
+        docker: bool,
+    },
+
+    /// Show monitoring status
+    #[clap(name = "status")]
+    Status,
+
+    /// Show monitoring metrics
+    #[clap(name = "metrics")]
+    Metrics,
+}
+
+/// Plugin commands
+#[derive(Debug, Subcommand)]
+pub enum PluginCommand {
+    /// List all plugins
+    #[clap(name = "list")]
+    List,
+
+    /// Show plugin details
+    #[clap(name = "show")]
+    Show {
+        /// Plugin ID
+        #[clap(name = "id")]
+        id: String,
+    },
+
+    /// Execute a plugin
+    #[clap(name = "exec")]
+    Execute {
+        /// Plugin ID
+        #[clap(name = "id")]
+        id: String,
+
+        /// Arguments to pass to the plugin
+        #[clap(name = "args")]
+        args: Vec<String>,
+    },
+
+    /// Enable the example plugin
+    #[clap(name = "enable-example")]
+    EnableExample,
+
+    /// Disable the example plugin
+    #[clap(name = "disable-example")]
+    DisableExample,
 }

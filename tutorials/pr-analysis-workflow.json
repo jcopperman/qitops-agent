@@ -1,0 +1,61 @@
+{
+  "id": "pr-analysis-workflow",
+  "title": "PR Analysis Workflow",
+  "description": "Learn how to analyze pull requests for quality, risks, and test coverage using QitOps Agent.",
+  "steps": [
+    {
+      "title": "Introduction to PR Analysis",
+      "content": "QitOps Agent can analyze pull requests to identify potential issues, assess test coverage, and provide recommendations.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Setting Up GitHub Integration",
+      "content": "Before analyzing pull requests, you need to set up GitHub integration. This allows QitOps to access your GitHub repositories.",
+      "example": "qitops github config --token YOUR_GITHUB_TOKEN",
+      "expected_action": "Set up GitHub integration using your GitHub token"
+    },
+    {
+      "title": "Basic PR Analysis",
+      "content": "Let's start with basic PR analysis. The pr-analyze command requires a PR number.",
+      "example": "qitops run pr-analyze --pr 123",
+      "expected_action": "Try analyzing a pull request using the example command"
+    },
+    {
+      "title": "Using Sources",
+      "content": "You can specify sources to use for PR analysis using the --sources option. Sources provide additional context for analysis.",
+      "example": "qitops run pr-analyze --pr 123 --sources requirements,standards",
+      "expected_action": "Try analyzing a pull request with specific sources"
+    },
+    {
+      "title": "Using Personas",
+      "content": "You can specify personas to use for PR analysis using the --personas option. Personas provide different perspectives on analysis.",
+      "example": "qitops run pr-analyze --pr 123 --personas qa-engineer",
+      "expected_action": "Try analyzing a pull request with a specific persona"
+    },
+    {
+      "title": "Reviewing Analysis Results",
+      "content": "After analyzing a pull request, review the results to identify potential issues and areas for improvement. The analysis includes code quality, test coverage, and potential risks.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Taking Action",
+      "content": "Based on the analysis results, take appropriate action to address any issues or concerns. This may include adding tests, refactoring code, or requesting changes from the PR author.",
+      "example": null,
+      "expected_action": null
+    },
+    {
+      "title": "Congratulations!",
+      "content": "You've completed the PR analysis workflow tutorial! You now know how to analyze pull requests for quality, risks, and test coverage using QitOps Agent.",
+      "example": null,
+      "expected_action": null
+    }
+  ],
+  "tags": [
+    "pr",
+    "workflow"
+  ],
+  "difficulty": "intermediate",
+  "estimated_time": 20
+}

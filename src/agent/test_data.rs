@@ -1,5 +1,4 @@
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
+use anyhow::Result;
 use std::fs;
 use std::path::Path;
 
@@ -90,19 +89,58 @@ impl Agent for TestDataAgent {
     }
 
     async fn execute(&self) -> Result<AgentResponse> {
+        // Validate format
+        let format = self.format.to_lowercase();
+        if !["json", "csv", "yaml", "yml"].contains(&format.as_str()) {
+            return Ok(AgentResponse {
+                status: AgentStatus::Error,
+                message: format!("Unsupported output format: {}. Supported formats are: json, csv, yaml", self.format),
+                data: None,
+            });
+        }
+
         // Generate the prompt
         let prompt = self.generate_prompt();
 
         // Create the LLM request
-        let model = self.llm_router.default_model().unwrap_or_else(|| "tinyllama".to_string());
+        let model = self.llm_router.default_model().unwrap_or_else(|| "mistral".to_string());
         let request = LlmRequest::new(prompt, model)
             .with_system_message(self.system_prompt());
 
         // Send the request to the LLM
-        let response = self.llm_router.send(request, Some("test-data")).await?;
+        let response = match self.llm_router.send(request, Some("test-data")).await {
+            Ok(response) => response,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to get response from LLM: {}", e),
+                    data: Some(serde_json::json!({
+                        "schema": self.schema,
+                        "count": self.count,
+                        "constraints": self.constraints,
+                        "error": format!("{}", e),
+                    })),
+                });
+            }
+        };
 
         // Save the test data to a file
-        let output_file = self.save_test_data(&response.text)?;
+        let output_file = match self.save_test_data(&response.text) {
+            Ok(file) => file,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to save test data: {}", e),
+                    data: Some(serde_json::json!({
+                        "schema": self.schema,
+                        "count": self.count,
+                        "constraints": self.constraints,
+                        "test_data": response.text,
+                        "error": format!("{}", e),
+                    })),
+                });
+            }
+        };
 
         // Return the response
         Ok(AgentResponse {
@@ -113,6 +151,9 @@ impl Agent for TestDataAgent {
                 "schema": self.schema,
                 "count": self.count,
                 "constraints": self.constraints,
+                "format": self.format,
+                "model": response.model,
+                "provider": response.provider,
             })),
         })
     }

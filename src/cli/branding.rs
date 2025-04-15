@@ -4,24 +4,16 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone, Copy)]
 pub enum Color {
-    Red,
     Green,
     Blue,
-    Yellow,
     Cyan,
-    Magenta,
-    White,
 }
 
 pub fn colorize(text: &str, color: Color) -> String {
     match color {
-        Color::Red => text.red().to_string(),
         Color::Green => text.green().to_string(),
         Color::Blue => text.blue().to_string(),
-        Color::Yellow => text.yellow().to_string(),
         Color::Cyan => text.cyan().to_string(),
-        Color::Magenta => text.magenta().to_string(),
-        Color::White => text.white().to_string(),
     }
 }
 

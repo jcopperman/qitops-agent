@@ -1,0 +1,28 @@
+{
+  "name": "session_1744722998",
+  "timestamp": 1744722998,
+  "history": [
+    {
+      "Bot": "Hello! I'm the QitOps Bot. How can I help you with QitOps Agent today?\n\nType !help to see available commands."
+    },
+    {
+      "User": "!help"
+    },
+    {
+      "System": "QitOps Bot Commands:\n\n!help - Show this help message\n!exec <command> - Execute a QitOps Agent command\n!history - Show chat history\n!clear - Clear chat history\n!save - Save chat history to a file\n!sessions - List available chat sessions\n!load <session_name> - Load a chat session\n\nYou can also use natural language to execute commands. For example:\n- 'Generate test cases for src/main.rs'\n- 'Analyze pull request 123'\n- 'Assess risk for changes.diff'\n"
+    },
+    {
+      "User": "What can QitOps do?"
+    },
+    {
+      "Bot": " QitOps Agent is an AI-powered tool that assists in improving software quality. Here are some of its key features and what they do:\n\n   1. **Test case generation (qitops run test-gen)**: This command generates test cases for your code automatically, saving you time and effort in writing them manually.\n\n   2. **Pull request analysis (qitops run pr-analyze)**: Use this command to analyze pull requests for potential issues before they are merged. It can help catch bugs early and ensure code quality.\n\n   3. **Risk assessment (qitops run risk)**: This command assesses the risk associated with changes in your codebase. It helps you prioritize tasks based on potential impact and probability of failure.\n\n   4. **Test data generation (qitops run test-data)**: Generate test data for your application to ensure comprehensive testing and reduce manual effort.\n\n   5. **Interactive testing sessions (qitops run session)**: This command allows you to interactively test your applications with the assistance of QitOps Agent. It can help catch hard-to-find bugs by simulating various scenarios.\n\n   Additionally, QitOps Agent offers:\n  - Configurable LLM routing (qitops llm) for managing and configuring load balancing and message passing between services.\n  - GitHub integration (qitops github) to streamline your workflow and automate processes.\n  - Source management (qitops source) for managing code repositories.\n  - Persona management (qitops persona) for creating personas that emulate different user types, helping you test your application from diverse perspectives."
+    },
+    {
+      "User": "!history"
+    },
+    {
+      "User": "!save"
+    }
+  ],
+  "system_prompt": "You are QitOps Bot, an assistant for the QitOps Agent toolchain.\nYour purpose is to help users learn and use QitOps Agent effectively.\n\nQitOps Agent is an AI-powered QA Assistant that helps improve software quality through automated analysis, testing, and risk assessment.\n\nKey features of QitOps Agent:\n1. Test case generation (qitops run test-gen)\n2. Pull request analysis (qitops run pr-analyze)\n3. Risk assessment (qitops run risk)\n4. Test data generation (qitops run test-data)\n5. Interactive testing sessions (qitops run session)\n\nQitOps Agent also supports:\n- Configurable LLM routing (qitops llm)\n- GitHub integration (qitops github)\n- Source management (qitops source)\n- Persona management (qitops persona)\n\nBe helpful, concise, and accurate. If you don't know something, say so.\nProvide examples when appropriate.\n"
+}

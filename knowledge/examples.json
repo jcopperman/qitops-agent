@@ -118,5 +118,59 @@
     "description": "Set up environment variables for personas",
     "code": "# Windows (PowerShell)\n$env:QITOPS_PERSONAS = \"security-analyst:Security Analyst:security;vulnerabilities;compliance:Focus on security vulnerabilities and compliance issues.\"\n$env:QITOPS_DEFAULT_PERSONAS = \"security-analyst\"\n\n# Linux/macOS\nexport QITOPS_PERSONAS=\"security-analyst:Security Analyst:security;vulnerabilities;compliance:Focus on security vulnerabilities and compliance issues.\"\nexport QITOPS_DEFAULT_PERSONAS=\"security-analyst\"",
     "tags": ["environment", "personas"]
+  },
+  {
+    "title": "Test Generation for Multiple Files",
+    "description": "Generate test cases for multiple files in a directory",
+    "code": "qitops run test-gen --path src/components/ --format markdown",
+    "tags": ["test-gen", "multiple-files"]
+  },
+  {
+    "title": "PR Analysis with Custom Focus",
+    "description": "Analyze a PR with a custom focus area",
+    "code": "qitops run pr-analyze --pr 123 --focus performance,accessibility",
+    "tags": ["pr-analyze", "custom-focus"]
+  },
+  {
+    "title": "Risk Assessment with Focus Areas",
+    "description": "Assess risk with specific focus areas",
+    "code": "qitops run risk --diff changes.diff --focus security,performance,reliability",
+    "tags": ["risk", "focus-areas"]
+  },
+  {
+    "title": "Test Data Generation with Custom Format",
+    "description": "Generate test data in a custom format",
+    "code": "qitops run test-data --schema transaction.json --count 20 --format csv",
+    "tags": ["test-data", "custom-format"]
+  },
+  {
+    "title": "Testing Session with Application Focus",
+    "description": "Start a testing session for a specific application",
+    "code": "qitops run session --name \"Payment Flow\" --application payment-service --focus regression",
+    "tags": ["session", "application-focus"]
+  },
+  {
+    "title": "Testing LLM with Custom Prompt",
+    "description": "Test an LLM with a custom prompt",
+    "code": "qitops llm test --provider openai --prompt \"Generate a test case for a login function\"",
+    "tags": ["llm", "test"]
+  },
+  {
+    "title": "Listing Available Sources",
+    "description": "List all available sources",
+    "code": "qitops source list",
+    "tags": ["source", "list"]
+  },
+  {
+    "title": "Showing Persona Details",
+    "description": "Show details of a specific persona",
+    "code": "qitops persona show --id qa-engineer",
+    "tags": ["persona", "show"]
+  },
+  {
+    "title": "Using Cache Control for LLM Requests",
+    "description": "Control caching behavior for LLM requests",
+    "code": "qitops llm test --provider ollama --prompt \"Generate a test case\" --no-cache",
+    "tags": ["llm", "cache"]
   }
 ]

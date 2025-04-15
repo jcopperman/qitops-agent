@@ -178,26 +178,89 @@ impl Agent for RiskAgent {
         // Get the diff
         let diff = if self.github_client.is_some() {
             // Get diff from GitHub PR
-            let pr_number = self.extract_pr_number()?;
-            let owner = self.owner.as_ref().ok_or_else(|| anyhow::anyhow!("Repository owner not specified"))?;
-            let repo = self.repo.as_ref().ok_or_else(|| anyhow::anyhow!("Repository name not specified"))?;
+            let pr_number = match self.extract_pr_number() {
+                Ok(num) => num,
+                Err(e) => {
+                    return Ok(AgentResponse {
+                        status: AgentStatus::Error,
+                        message: format!("Failed to extract PR number: {}", e),
+                        data: None,
+                    });
+                }
+            };
 
-            self.github_client.as_ref().unwrap().get_pull_request_diff(owner, repo, pr_number).await?
+            let owner = match self.owner.as_ref() {
+                Some(owner) => owner,
+                None => {
+                    return Ok(AgentResponse {
+                        status: AgentStatus::Error,
+                        message: "Repository owner not specified".to_string(),
+                        data: None,
+                    });
+                }
+            };
+
+            let repo = match self.repo.as_ref() {
+                Some(repo) => repo,
+                None => {
+                    return Ok(AgentResponse {
+                        status: AgentStatus::Error,
+                        message: "Repository name not specified".to_string(),
+                        data: None,
+                    });
+                }
+            };
+
+            match self.github_client.as_ref().unwrap().get_pull_request_diff(owner, repo, pr_number).await {
+                Ok(diff) => diff,
+                Err(e) => {
+                    return Ok(AgentResponse {
+                        status: AgentStatus::Error,
+                        message: format!("Failed to get PR diff: {}", e),
+                        data: Some(serde_json::json!({
+                            "pr_number": pr_number,
+                            "error": format!("{}", e),
+                        })),
+                    });
+                }
+            }
         } else {
             // Read diff from file
-            self.read_diff_file()?
+            match self.read_diff_file() {
+                Ok(diff) => diff,
+                Err(e) => {
+                    return Ok(AgentResponse {
+                        status: AgentStatus::Error,
+                        message: format!("Failed to read diff file: {}", e),
+                        data: None,
+                    });
+                }
+            }
         };
 
         // Generate the prompt
         let prompt = self.generate_prompt(&diff);
 
         // Create the LLM request
-        let model = self.llm_router.default_model().unwrap_or_else(|| "tinyllama".to_string());
+        let model = self.llm_router.default_model().unwrap_or_else(|| "mistral".to_string());
         let request = LlmRequest::new(prompt, model)
             .with_system_message(self.system_prompt());
 
         // Send the request to the LLM
-        let response = self.llm_router.send(request, Some("risk")).await?;
+        let response = match self.llm_router.send(request, Some("risk")).await {
+            Ok(response) => response,
+            Err(e) => {
+                return Ok(AgentResponse {
+                    status: AgentStatus::Error,
+                    message: format!("Failed to get response from LLM: {}", e),
+                    data: Some(serde_json::json!({
+                        "components": self.components,
+                        "focus_areas": self.focus_areas,
+                        "error": format!("{}", e),
+                    })),
+                });
+            }
+        };
 
         // Return the response
         Ok(AgentResponse {
@@ -207,6 +270,8 @@ impl Agent for RiskAgent {
                 "assessment": response.text,
                 "components": self.components,
                 "focus_areas": self.focus_areas,
+                "model": response.model,
+                "provider": response.provider,
             })),
         })
     }
