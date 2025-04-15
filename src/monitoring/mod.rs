@@ -29,7 +29,6 @@ pub struct MonitoringService {
     /// Server handle
     server_handle: Option<JoinHandle<()>>,
     /// Start time of the service
-    #[allow(dead_code)]
     start_time: Instant,
 }
 
@@ -89,7 +88,6 @@ impl MonitoringService {
     }
 
     /// Get the uptime of the service
-    #[allow(dead_code)]
     pub fn uptime(&self) -> Duration {
         self.start_time.elapsed()
     }
@@ -259,7 +257,6 @@ pub fn track_cache_miss() {
 }
 
 /// Track a session message
-#[allow(dead_code)]
 pub fn track_session_message(is_user: bool) {
     SESSION_MESSAGE_COUNTER.inc();
     if is_user {

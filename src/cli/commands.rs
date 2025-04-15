@@ -58,6 +58,14 @@ pub enum Command {
         command: MonitoringCommand,
     },
 
+    /// Plugin management
+    #[clap(name = "plugin", about = "Manage plugins for QitOps Agent")]
+    Plugin {
+        /// Plugin subcommand
+        #[clap(subcommand)]
+        command: PluginCommand,
+    },
+
     /// Show version information
     #[clap(name = "version")]
     Version,
@@ -205,4 +213,44 @@ pub enum MonitoringCommand {
     /// Show monitoring status
     #[clap(name = "status")]
     Status,
+
+    /// Show monitoring metrics
+    #[clap(name = "metrics")]
+    Metrics,
+}
+
+/// Plugin commands
+#[derive(Debug, Subcommand)]
+pub enum PluginCommand {
+    /// List all plugins
+    #[clap(name = "list")]
+    List,
+
+    /// Show plugin details
+    #[clap(name = "show")]
+    Show {
+        /// Plugin ID
+        #[clap(name = "id")]
+        id: String,
+    },
+
+    /// Execute a plugin
+    #[clap(name = "exec")]
+    Execute {
+        /// Plugin ID
+        #[clap(name = "id")]
+        id: String,
+
+        /// Arguments to pass to the plugin
+        #[clap(name = "args")]
+        args: Vec<String>,
+    },
+
+    /// Enable the example plugin
+    #[clap(name = "enable-example")]
+    EnableExample,
+
+    /// Disable the example plugin
+    #[clap(name = "disable-example")]
+    DisableExample,
 }

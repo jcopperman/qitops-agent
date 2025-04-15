@@ -13,19 +13,20 @@ pub mod context;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::commands::{Cli, Command, RunCommand, MonitoringCommand};
+use cli::commands::{Cli, Command, RunCommand, MonitoringCommand, PluginCommand};
 use cli::llm::handle_llm_command;
 use cli::github::handle_github_command;
 use cli::source::handle_source_command;
 use cli::persona::handle_persona_command;
 use cli::bot::handle_bot_command;
+use cli::plugin::handle_plugin_command;
 use cli::branding;
 use cli::progress::ProgressIndicator;
 use tracing::info;
 use colored::Colorize;
 use std::io::Write;
 
-use agent::{TestGenAgent, PrAnalyzeAgent, RiskAgent, TestDataAgent, SessionAgent, AgentStatus};
+use agent::{PrAnalyzeAgent, RiskAgent, TestDataAgent, SessionAgent, AgentStatus};
 use agent::traits::Agent;
 use llm::{ConfigManager, LlmRouter};
 use config::QitOpsConfigManager;
@@ -117,6 +118,52 @@ async fn main() -> Result<()> {
         }
     }
 
+    // Initialize plugin system
+    if let Err(e) = plugin::init_plugins() {
+        eprintln!("Warning: Failed to initialize plugin system: {}", e);
+    } else {
+        info!("Plugin system initialized");
+
+        // Load plugin state
+        let mut enabled_plugins = match plugin::load_plugin_state() {
+            Ok(plugins) => plugins,
+            Err(e) => {
+                eprintln!("Warning: Failed to load plugin state: {}", e);
+                Vec::new()
+            }
+        };
+
+        // Register enabled plugins
+        for plugin_id in &enabled_plugins {
+            if plugin_id == "example" {
+                if let Err(e) = plugin::register_example_plugin() {
+                    eprintln!("Warning: Failed to register example plugin: {}", e);
+                } else {
+                    info!("Example plugin registered");
+                }
+            }
+        }
+
+        // Check if we need to enable the example plugin from the command line
+        if let Command::Plugin { command: PluginCommand::EnableExample } = &cli.command {
+            if !enabled_plugins.contains(&"example".to_string()) {
+                enabled_plugins.push("example".to_string());
+
+                // Save plugin state
+                if let Err(e) = plugin::save_plugin_state(&enabled_plugins) {
+                    eprintln!("Warning: Failed to save plugin state: {}", e);
+                }
+
+                // Register the example plugin
+                if let Err(e) = plugin::register_example_plugin() {
+                    eprintln!("Warning: Failed to register example plugin: {}", e);
+                } else {
+                    info!("Example plugin registered");
+                }
+            }
+        }
+    }
+
     // Execute the requested command
     match cli.command {
         Command::Run { command } => {
@@ -145,6 +192,10 @@ async fn main() -> Result<()> {
         Command::Monitoring { command } => {
             branding::print_command_header("QitOps Monitoring");
             handle_monitoring_command(command).await?
+        }
+        Command::Plugin { command } => {
+            branding::print_command_header("QitOps Plugin Management");
+            handle_plugin_command(&command).await?
         }
         Command::Version => {
             println!("QitOps Agent v{}", env!("CARGO_PKG_VERSION"));
@@ -290,9 +341,21 @@ async fn handle_run_command_inner(command: RunCommand, _verbose: bool) -> Result
                 }
             };
 
+            // Validate the format string
+            let format_str = format.to_lowercase();
+            if agent::test_gen::TestFormat::from_str(&format_str).is_err() {
+                info!("Unrecognized format '{}', but will try to use it anyway", format);
+            }
+
             // Create and execute the test generation agent
             let progress = ProgressIndicator::new("Generating test cases...");
-            let agent = TestGenAgent::new(path, format.clone(), sources_vec, personas_vec, router).await?;
+            let agent = agent::TestGenAgent::new(
+                path.clone(),
+                format,
+                sources_vec,
+                personas_vec,
+                router
+            ).await?;
             let result = agent.execute().await?;
             progress.finish();
 
@@ -833,6 +896,11 @@ async fn handle_monitoring_command(command: MonitoringCommand) -> Result<()> {
 
                 branding::print_success("Monitoring is enabled");
                 println!("Metrics available at: http://{}:{}/metrics", monitoring_host, monitoring_port);
+
+                // Show uptime
+                let service = monitoring::MONITORING_SERVICE.lock().await;
+                let uptime = service.uptime();
+                println!("Uptime: {} seconds", uptime.as_secs());
             } else {
                 branding::print_info("Monitoring is disabled");
                 println!("Enable monitoring with: qitops monitoring start");
@@ -840,6 +908,64 @@ async fn handle_monitoring_command(command: MonitoringCommand) -> Result<()> {
 
             // Check if Docker monitoring stack is running
             check_docker_monitoring_stack().await?;
+        }
+        MonitoringCommand::Metrics => {
+            // Check if monitoring is enabled
+            let monitoring_enabled = std::env::var("QITOPS_MONITORING_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+
+            if monitoring_enabled {
+                branding::print_command_header("QitOps Monitoring Metrics");
+
+                // Show uptime
+                let service = monitoring::MONITORING_SERVICE.lock().await;
+                let uptime = service.uptime();
+                println!("Uptime: {} seconds", uptime.as_secs());
+
+                // Show command metrics
+                println!("\nCommand Metrics:");
+                println!("  Total Commands: {}", monitoring::COMMAND_COUNTER.get());
+                println!("  Test Generation: {}", monitoring::TEST_GEN_COUNTER.get());
+                println!("  PR Analysis: {}", monitoring::PR_ANALYZE_COUNTER.get());
+                println!("  Risk Assessment: {}", monitoring::RISK_COUNTER.get());
+                println!("  Test Data Generation: {}", monitoring::TEST_DATA_COUNTER.get());
+                println!("  Sessions: {}", monitoring::SESSION_COUNTER.get());
+
+                // Show LLM metrics
+                println!("\nLLM Metrics:");
+                println!("  Total Requests: {}", monitoring::LLM_REQUEST_COUNTER.get());
+                println!("  OpenAI Requests: {}", monitoring::LLM_OPENAI_REQUEST_COUNTER.get());
+                println!("  Ollama Requests: {}", monitoring::LLM_OLLAMA_REQUEST_COUNTER.get());
+                println!("  Anthropic Requests: {}", monitoring::LLM_ANTHROPIC_REQUEST_COUNTER.get());
+                println!("  Total Token Usage: {}", monitoring::LLM_TOKEN_USAGE.get());
+
+                // Show cache metrics
+                println!("\nCache Metrics:");
+                println!("  Cache Hits: {}", monitoring::CACHE_HIT_COUNTER.get());
+                println!("  Cache Misses: {}", monitoring::CACHE_MISS_COUNTER.get());
+
+                // Show error metrics
+                println!("\nError Metrics:");
+                println!("  Total Errors: {}", monitoring::ERROR_COUNTER.get());
+                println!("  LLM Errors: {}", monitoring::LLM_ERROR_COUNTER.get());
+                println!("  GitHub Errors: {}", monitoring::GITHUB_ERROR_COUNTER.get());
+                println!("  Agent Errors: {}", monitoring::AGENT_ERROR_COUNTER.get());
+
+                // Show session metrics
+                println!("\nSession Metrics:");
+                println!("  Total Messages: {}", monitoring::SESSION_MESSAGE_COUNTER.get());
+                println!("  User Messages: {}", monitoring::SESSION_USER_MESSAGE_COUNTER.get());
+                println!("  Agent Messages: {}", monitoring::SESSION_AGENT_MESSAGE_COUNTER.get());
+
+                // Show system metrics
+                println!("\nSystem Metrics:");
+                println!("  CPU Load: {:.2}%", monitoring::SYSTEM_CPU_LOAD_1M.get());
+                println!("  Memory Usage: {:.2} MB", monitoring::PROCESS_MEMORY_USAGE.get() / 1024.0 / 1024.0);
+                println!("  Total Memory: {:.2} GB", monitoring::SYSTEM_MEMORY_TOTAL.get() / 1024.0 / 1024.0 / 1024.0);
+                println!("  Free Memory: {:.2} GB", monitoring::SYSTEM_MEMORY_FREE.get() / 1024.0 / 1024.0 / 1024.0);
+            } else {
+                branding::print_info("Monitoring is disabled");
+                println!("Enable monitoring with: qitops monitoring start");
+            }
         }
     }
 

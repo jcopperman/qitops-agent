@@ -1,117 +1,8 @@
 use anyhow::Result;
 use clap::Subcommand;
 
-// Define the Persona and PersonaManager here
-#[derive(Debug, Clone)]
-pub struct Persona {
-    pub id: String,
-    pub name: String,
-    pub focus_areas: Vec<String>,
-    pub description: String,
-    pub prompt_template: Option<String>,
-}
-
-impl Persona {
-    pub fn new(
-        id: String,
-        name: String,
-        focus_areas: Vec<String>,
-        description: String,
-        prompt_template: Option<String>,
-    ) -> Self {
-        Self {
-            id,
-            name,
-            focus_areas,
-            description,
-            prompt_template,
-        }
-    }
-
-    pub fn get_prompt(&self) -> String {
-        if let Some(template) = &self.prompt_template {
-            template.clone()
-        } else {
-            format!(
-                "You are acting as a {}, focusing on {}. {}\n\nPlease provide your analysis based on this perspective.",
-                self.name,
-                self.focus_areas.join(", "),
-                self.description
-            )
-        }
-    }
-}
-
-pub struct PersonaManager {
-    personas: std::collections::HashMap<String, Persona>,
-}
-
-impl PersonaManager {
-    pub fn new() -> Result<Self> {
-        let mut manager = Self {
-            personas: std::collections::HashMap::new(),
-        };
-
-        // Add default personas
-        manager.add_persona(Persona::new(
-            "qa-engineer".to_string(),
-            "QA Engineer".to_string(),
-            vec!["testing".to_string(), "quality".to_string(), "coverage".to_string()],
-            "Focus on comprehensive test coverage and edge cases.".to_string(),
-            None,
-        ))?;
-
-        manager.add_persona(Persona::new(
-            "security-analyst".to_string(),
-            "Security Analyst".to_string(),
-            vec!["security".to_string(), "vulnerabilities".to_string(), "compliance".to_string()],
-            "Focus on security vulnerabilities and compliance issues.".to_string(),
-            None,
-        ))?;
-
-        manager.add_persona(Persona::new(
-            "performance-engineer".to_string(),
-            "Performance Engineer".to_string(),
-            vec!["performance".to_string(), "optimization".to_string(), "scalability".to_string()],
-            "Focus on performance implications and bottlenecks.".to_string(),
-            None,
-        ))?;
-
-        Ok(manager)
-    }
-
-    pub fn add_persona(&mut self, persona: Persona) -> Result<()> {
-        self.personas.insert(persona.id.clone(), persona);
-        Ok(())
-    }
-
-    pub fn remove_persona(&mut self, id: &str) -> Result<()> {
-        self.personas.remove(id);
-        Ok(())
-    }
-
-    pub fn get_persona(&self, id: &str) -> Option<&Persona> {
-        self.personas.get(id)
-    }
-
-    pub fn list_personas(&self) -> Vec<&Persona> {
-        self.personas.values().collect()
-    }
-
-    pub fn get_prompt_for_personas(&self, personas: &[String]) -> Result<String> {
-        let mut prompt = String::new();
-
-        for persona_id in personas {
-            if let Some(persona) = self.get_persona(persona_id) {
-                prompt.push_str(&format!("# Persona: {}\n\n", persona.name));
-                prompt.push_str(&persona.get_prompt());
-                prompt.push_str("\n\n");
-            }
-        }
-
-        Ok(prompt)
-    }
-}
+// Use the Persona and PersonaManager from the persona module
+use crate::persona::{Persona, PersonaManager};
 use crate::cli::branding;
 
 /// Persona CLI arguments
@@ -223,12 +114,19 @@ async fn list_personas() -> Result<()> {
     }
 
     println!("Personas:");
+    println!("{:-<60}", "");
+
     for persona in personas {
-        println!("  ID: {}", persona.id);
-        println!("    Name: {}", persona.name);
-        println!("    Focus Areas: {}", persona.focus_areas.join(", "));
-        println!("    Description: {}", persona.description);
-        println!();
+        println!("ID: {}", persona.id);
+        println!("Name: {}", persona.name);
+        println!("Focus Areas: {}", persona.focus_areas.join(", "));
+        println!("Description: {}", persona.description);
+
+        if let Some(template) = &persona.prompt_template {
+            println!("Prompt Template: {}", template);
+        }
+
+        println!("{:-<60}", "");
     }
 
     Ok(())
@@ -252,6 +150,7 @@ async fn show_persona(id: &str) -> Result<()> {
     let persona = persona_manager.get_persona(id)
         .ok_or_else(|| anyhow::anyhow!("Persona not found: {}", id))?;
 
+    println!("{:-<60}", "");
     println!("Persona: {}", persona.id);
     println!("Name: {}", persona.name);
     println!("Focus Areas: {}", persona.focus_areas.join(", "));
@@ -262,6 +161,11 @@ async fn show_persona(id: &str) -> Result<()> {
         println!("Prompt Template:");
         println!("{}", template);
     }
+
+    println!();
+    println!("Generated Prompt:");
+    println!("{}", persona.get_prompt());
+    println!("{:-<60}", "");
 
     Ok(())
 }

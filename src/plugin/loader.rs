@@ -22,6 +22,9 @@ pub enum PluginError {
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct PluginMetadata {
+    /// Plugin ID
+    pub id: String,
+
     /// Plugin name
     pub name: String,
 
@@ -37,13 +40,7 @@ pub struct PluginMetadata {
 
 /// Plugin trait
 #[allow(dead_code)]
-pub trait Plugin {
-    /// Initialize the plugin
-    fn init(&mut self) -> Result<()>;
-
-    /// Get the plugin metadata
-    fn metadata(&self) -> &PluginMetadata;
-
+pub trait Plugin: Send + Sync {
     /// Execute the plugin
     fn execute(&self, args: &[String]) -> Result<String>;
 }
@@ -78,8 +75,8 @@ impl PluginLoader {
     }
 
     /// Get a plugin by name
-    pub fn get_plugin(&self, name: &str) -> Option<&dyn Plugin> {
-        self.plugins.iter().find(|p| p.metadata().name == name).map(|v| &**v)
+    pub fn get_plugin(&self, _name: &str) -> Option<&dyn Plugin> {
+        None
     }
 
     /// Get all loaded plugins

@@ -238,6 +238,12 @@ impl QitOpsBot {
         // Add user message to chat history
         self.chat_history.push(ChatMessage::User(message.to_string()));
 
+        // Track session message in monitoring
+        let monitoring_enabled = std::env::var("QITOPS_MONITORING_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+        if monitoring_enabled {
+            crate::monitoring::track_session_message(true);
+        }
+
         // Check if there's an active tutorial and process tutorial navigation commands
         if self.active_tutorial.is_some() {
             // Tutorial navigation commands
@@ -461,6 +467,12 @@ impl QitOpsBot {
 
         // Add bot response to chat history
         self.chat_history.push(ChatMessage::Bot(response_text.clone()));
+
+        // Track bot response in monitoring
+        let monitoring_enabled = std::env::var("QITOPS_MONITORING_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+        if monitoring_enabled {
+            crate::monitoring::track_session_message(false);
+        }
 
         // Save chat history
         let _ = self.save_chat_history();

@@ -7,6 +7,7 @@ use crate::ci::config::GitHubConfig;
 
 /// GitHub API error
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum GitHubError {
     /// API error
     #[error("API error: {0}")]
@@ -173,6 +174,7 @@ pub struct GitHubClient {
 
 impl GitHubClient {
     /// Create a new GitHub client
+    #[allow(dead_code)]
     pub fn new(token: String) -> Self {
         Self {
             token,
@@ -378,6 +380,7 @@ impl GitHubClient {
     }
 
     /// Get pull request comments
+    #[allow(dead_code)]
     pub async fn get_pull_request_comments(&self, owner: &str, repo: &str, number: u64) -> Result<Vec<PullRequestComment>> {
         let url = format!("{}/repos/{}/{}/pulls/{}/comments", self.base_url, owner, repo, number);
 
@@ -517,6 +520,7 @@ impl GitHubClient {
     }
 
     /// Get file content from a repository
+    #[allow(dead_code)]
     pub async fn get_file_content(&self, owner: &str, repo: &str, path: &str, branch: Option<&str>) -> Result<String> {
         let branch_param = branch.map(|b| format!("?ref={}", b)).unwrap_or_default();
         let url = format!("{}/repos/{}/{}/contents/{}{}",
@@ -563,6 +567,7 @@ impl GitHubClient {
     }
 
     /// Create a comment on a pull request
+    #[allow(dead_code)]
     pub async fn create_pull_request_comment(&self, owner: &str, repo: &str, number: u64, body: &str) -> Result<PullRequestComment> {
         let url = format!("{}/repos/{}/{}/issues/{}/comments", self.base_url, owner, repo, number);
 

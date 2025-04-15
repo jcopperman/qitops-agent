@@ -11,6 +11,7 @@ use crate::monitoring;
 
 /// LLM client error
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum LlmError {
     /// API error
     #[error("API error: {0}")]
