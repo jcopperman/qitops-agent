@@ -2,6 +2,7 @@ use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use tracing::{info, debug, warn};
 
 use crate::agent::traits::{Agent, AgentResponse, AgentStatus};
 use crate::llm::{LlmRequest, LlmRouter};
@@ -37,12 +38,132 @@ impl TestFormat {
         }
     }
 
-    /// Get the system prompt for this format
+    /// Get the enhanced system prompt for this format
     pub fn system_prompt(&self) -> String {
         match self {
-            TestFormat::Markdown => "Generate test cases in Markdown format. Use proper Markdown formatting with headers, lists, and code blocks.".to_string(),
-            TestFormat::Yaml => "Generate test cases in YAML format. Follow proper YAML syntax and indentation.".to_string(),
-            TestFormat::Robot => "Generate test cases in Robot Framework format. Follow proper Robot Framework syntax with settings, variables, and keywords.".to_string(),
+            TestFormat::Markdown => {
+                "You are an expert test engineer specializing in creating comprehensive test cases. \
+                Your task is to generate detailed test cases in Markdown format that:
+
+\
+                1. Cover all functionality in the provided code
+\
+                2. Include both positive and negative test scenarios
+\
+                3. Test edge cases and boundary conditions
+\
+                4. Verify error handling and exception paths
+\
+                5. Are clearly organized with descriptive headers
+
+\
+                Format your response using proper Markdown with:
+\
+                - Clear hierarchical headers (## for test categories, ### for individual tests)
+\
+                - Bulleted lists for test steps
+\
+                - Code blocks for example inputs and expected outputs
+\
+                - Tables where appropriate to organize test data
+
+\
+                Each test case should include:
+\
+                - A unique identifier and descriptive name
+\
+                - Preconditions and setup requirements
+\
+                - Test steps with specific inputs
+\
+                - Expected results and verification points
+\
+                - Any cleanup or teardown steps".to_string()
+            },
+            TestFormat::Yaml => {
+                "You are an expert test engineer specializing in creating comprehensive test cases. \
+                Your task is to generate detailed test cases in YAML format that:
+
+\
+                1. Cover all functionality in the provided code
+\
+                2. Include both positive and negative test scenarios
+\
+                3. Test edge cases and boundary conditions
+\
+                4. Verify error handling and exception paths
+\
+                5. Are structured for easy automation
+
+\
+                Follow proper YAML syntax and indentation. Structure your test cases with a test suite containing tests, each with an ID, name, description, preconditions, steps, and cleanup actions.
+
+\
+                Ensure your YAML is valid and properly indented.".to_string()
+            },
+            TestFormat::Robot => {
+                "You are an expert test automation engineer specializing in Robot Framework. \
+                Your task is to generate detailed test cases in Robot Framework format that:
+
+\
+                1. Cover all functionality in the provided code
+\
+                2. Include both positive and negative test scenarios
+\
+                3. Test edge cases and boundary conditions
+\
+                4. Verify error handling and exception paths
+\
+                5. Follow Robot Framework best practices
+
+\
+                Structure your test cases using proper Robot Framework syntax with:
+
+\
+                ```robot
+\
+                *** Settings ***
+\
+                Documentation    Test suite description
+\
+                Library          Appropriate libraries
+
+\
+                *** Variables ***
+\
+                ${VARIABLE}      Value
+
+\
+                *** Test Cases ***
+\
+                Test Case Name
+\
+                    [Documentation]    Test case description
+\
+                    [Setup]            Setup keyword
+\
+                    Step Keyword       Arguments
+\
+                    Verification Keyword    Expected result
+\
+                    [Teardown]         Teardown keyword
+
+\
+                *** Keywords ***
+\
+                Custom Keyword
+\
+                    [Arguments]    ${arg1}    ${arg2}
+\
+                    # Keyword implementation
+\
+                    [Return]    Return value
+\
+                ```
+
+\
+                Use appropriate Robot Framework libraries and keywords based on the code being tested.".to_string()
+            },
         }
     }
 }
@@ -224,9 +345,15 @@ impl Agent for TestGenAgent {
         };
 
         // Generate the prompt
+        info!("Generating enhanced prompt for test generation");
         let prompt = match self.generate_prompt(&source_code).await {
-            Ok(prompt) => prompt,
+            Ok(prompt) => {
+                info!("Successfully generated enhanced prompt with length: {}", prompt.len());
+                debug!("Enhanced prompt: {}", prompt);
+                prompt
+            },
             Err(e) => {
+                warn!("Failed to generate prompt: {}", e);
                 return Ok(AgentResponse {
                     status: AgentStatus::Error,
                     message: format!("Failed to generate prompt: {}", e),

@@ -6,6 +6,7 @@ use std::fmt;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::Mutex;
+use tracing::debug;
 
 /// LLM client error
 #[derive(Debug, Error)]
@@ -152,6 +153,29 @@ impl LlmRequest {
             role: MessageRole::System,
             content,
         });
+        self
+    }
+
+    /// Truncate the user message content to fit within a token limit
+    /// This is a simple character-based truncation, not token-based
+    pub fn truncate_content(mut self, max_chars: usize) -> Self {
+        for msg in &mut self.messages {
+            if msg.role == MessageRole::User && msg.content.len() > max_chars {
+                // Keep the first 20% and the last 80% of the max_chars
+                let first_part_size = max_chars / 5; // 20%
+                let last_part_size = max_chars - first_part_size;
+
+                let first_part = &msg.content[..first_part_size];
+                let content_len = msg.content.len();
+                let last_part = &msg.content[content_len - last_part_size..];
+
+                msg.content = format!(
+                    "{}\n\n[...CONTENT TRUNCATED TO FIT MODEL CONTEXT WINDOW...]\n\n{}",
+                    first_part,
+                    last_part
+                );
+            }
+        }
         self
     }
 
@@ -561,7 +585,7 @@ impl LlmRouter {
     }
 
     /// Send a request to the LLM using the appropriate client
-    pub async fn send(&self, request: LlmRequest, task: Option<&str>) -> Result<LlmResponse> {
+    pub async fn send(&self, mut request: LlmRequest, task: Option<&str>) -> Result<LlmResponse> {
         // Determine which provider to use based on the task
         let provider = if let Some(task) = task {
             self.config.task_providers.get(task)
@@ -574,6 +598,25 @@ impl LlmRouter {
         // Try to get the client
         let client = self.clients.get(provider)
             .ok_or_else(|| anyhow!("Provider not found: {}", provider))?;
+
+        // Truncate content if it's too large
+        // This is a simple heuristic - for Ollama/Mistral, we'll limit to 32K chars
+        // which should be around 8K tokens
+        if provider == "ollama" {
+            // Check if any message is too large
+            let mut needs_truncation = false;
+            for msg in &request.messages {
+                if msg.role == MessageRole::User && msg.content.len() > 32000 {
+                    needs_truncation = true;
+                    debug!("User message is too large ({} chars), truncating", msg.content.len());
+                    break;
+                }
+            }
+
+            if needs_truncation {
+                request = request.truncate_content(32000);
+            }
+        }
 
         // Check cache if enabled and request allows caching
         if request.use_cache && self.cache.is_some() {

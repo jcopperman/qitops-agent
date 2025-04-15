@@ -1,7 +1,19 @@
- This code seems to be a part of a CLI tool written in Rust using the `anyhow` and `indicatif` crates for error handling and progress indicators respectively. The main functionality appears to be handling commands related to monitoring, such as starting, stopping, and checking the status of a Docker monitoring stack (presumably for some kind of system monitoring dashboard).
+ This code appears to be a Rust implementation of a command-line tool for managing a monitoring system that includes Graphana (likely for visualizing data) and possibly other components. Here's an overview of the main functionalities provided:
 
-The code includes functions to handle errors using the `anyhow` crate, which allows for structured error messages. The `indicatif` crate is used to display progress indicators during long-running tasks like starting or stopping the Docker monitoring stack.
+1. **Monitoring System Commands**: The script defines the following commands for the monitoring system:
+   - `status`: prints the status of the monitoring system (running or not).
+   - `start`: starts the monitoring system.
+   - `stop`: stops the monitoring system.
+   - `check`: checks if the monitoring system is running.
+   - A `--docker` flag can be added to any of these commands to enable Docker-based components (Grafana, etc.) when starting/checking the monitoring system.
 
-Additionally, it looks like there's a function to handle commands with arguments such as `--docker`, which may enable or disable the use of Docker when running certain commands. The code also includes functions for displaying success and error messages using the `println!` macro and the `colorful` crate (not shown in this excerpt).
+2. **Docker Commands**: The script includes functions for managing Docker components of the monitoring system:
+   - `start_docker`: starts the Docker-based components of the monitoring system.
+   - `stop_docker`: stops the Docker-based components of the monitoring system.
+   - `check_docker`: checks if the Docker-based components of the monitoring system are running.
 
-Overall, it appears that this code is part of a CLI tool for managing the deployment and monitoring of some kind of system dashboard. However, without more context, it's difficult to say exactly what this tool does or how it's intended to be used.
+3. **Error Handling and Logging**: The script uses a custom logging function with different severity levels like `info`, `warning`, and `error`. Additionally, it includes error handling using Rust's `Result` type to manage any errors that might occur during execution.
+
+4. **Progress Indicator**: A simple progress indicator is used for long-running tasks (e.g., starting/stopping Docker components) to inform the user about the task status.
+
+Overall, this script seems like a useful tool for managing a monitoring system with Docker components more easily from the command line.

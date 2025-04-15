@@ -9,6 +9,7 @@ mod config;
 mod bot;
 mod update;
 mod monitoring;
+pub mod context;
 
 use anyhow::Result;
 use clap::Parser;
@@ -57,7 +58,7 @@ async fn main() -> Result<()> {
         .with_env_filter(if std::env::var("RUST_LOG").is_ok() {
             tracing_subscriber::EnvFilter::from_default_env()
         } else {
-            tracing_subscriber::EnvFilter::new("warn")
+            tracing_subscriber::EnvFilter::new("qitops=info,warn")
         })
         .init();
 
@@ -87,10 +88,7 @@ async fn main() -> Result<()> {
     // Enable verbose logging if requested
     if cli.verbose {
         info!("Verbose logging enabled");
-        // Update the log level dynamically
-        tracing_subscriber::fmt()
-            .with_env_filter("info")
-            .init();
+        // We don't need to reinitialize the subscriber, just log that verbose mode is enabled
     }
 
     // Check for updates in the background
